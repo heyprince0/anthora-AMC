@@ -463,7 +463,7 @@ export default function ContractsPage() {
 
       autoTable(doc, {
         startY: 28,
-        head: [["Contract Name", "Customer", "Frequency", "Price (Rs.)", "Contract End Date", "Start Date", "Next Service", "Status"]],
+        head: [["Contract Name", "Customer", "Frequency", "Price (Rs.)", "Contract End", "Last Service", "Next Service", "Status"]],
         body: tableData,
         theme: "striped",
         headStyles: {
