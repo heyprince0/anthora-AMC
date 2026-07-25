@@ -610,8 +610,8 @@ export default function ContractsPage() {
                       <TableHead>Customer</TableHead>
                       <TableHead>Frequency</TableHead>
                       <TableHead>Price</TableHead>
-                      <TableHead>Contract End Date</TableHead>
-                      <TableHead>Start Date</TableHead>
+                      <TableHead>Contract End</TableHead>
+                      <TableHead>Last Service</TableHead>
                       <TableHead>Next Service</TableHead>
                       <TableHead>Status</TableHead>
                       {/* Hide Actions column for technicians */}
