@@ -163,43 +163,6 @@ export function MarkCompleteModal({
 
       if (contractError) throw contractError
 
-      // Step 3: Send WhatsApp notification (fire-and-forget)
-      try {
-        const [customerData, technicianData, companyData] = await Promise.all([
-          supabase.from("customers").select("*").eq("id", contract.customer_id).single(),
-          technicianId
-            ? supabase.from("technicians").select("*").eq("id", technicianId).single()
-            : Promise.resolve({ data: null }),
-          supabase.from("company_profile").select("*").eq("org_id", orgId).single(),
-        ])
-
-        const customer = customerData.data
-        const technician = technicianData.data
-        const company = companyData.data
-
-        if (customer?.phone) {
-          const nextServiceDateStr = nextServiceDate.toISOString().split("T")[0]
-
-          await fetch("/api/notify-service-complete", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              companyName: company?.company_name?.toUpperCase() || "",
-              customerName: customer.name || "",
-              customerPhone: customer.phone,
-              contractName: contract.contract_name || "",
-              technicianName: technician?.name || "",
-              serviceDate: serviceDate,
-              nextServiceDate: nextServiceDateStr,
-              companyPhone: company?.phone || "",
-              companyEmail: company?.email || "",
-            }),
-          })
-        }
-      } catch (error) {
-        console.error("Error sending WhatsApp notification:", error)
-      }
-
       toast.success("Service marked as complete!")
       onOpenChange(false)
       onSuccess()
