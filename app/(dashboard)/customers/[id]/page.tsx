@@ -296,8 +296,8 @@ export default function CustomerDetailPage() {
                       <TableHead>Contract Name</TableHead>
                       <TableHead>Frequency</TableHead>
                       <TableHead>Price</TableHead>
-                      <TableHead>Contract End Date</TableHead>
-                      <TableHead>Start Date</TableHead>
+                      <TableHead>Contract End</TableHead>
+                      <TableHead>Last Service</TableHead>
                       <TableHead>Next Service</TableHead>
                       <TableHead>Status</TableHead>
                     </TableRow>
