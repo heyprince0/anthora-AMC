@@ -182,6 +182,9 @@ export type Quotation = {
   body_text: string | null
   items: QuotationItem[]
   subtotal: number
+  discount_type?: "percentage" | "fixed" | null
+  discount_value?: number | null
+  discount_amount?: number | null
   sgst: number
   cgst: number
   grand_total: number
