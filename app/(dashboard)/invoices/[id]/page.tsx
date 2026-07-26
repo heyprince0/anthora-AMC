@@ -255,7 +255,6 @@ export default function ViewInvoicePage() {
     }))
   }
 
-  // --- updated totals to include discount ---
   const getTotals = () => {
     if (!invoice) return { subtotal: 0, discountAmount: 0, discountType: null, discountValue: 0, sgst: 0, cgst: 0, grandTotal: 0 }
     const subtotal = invoice.subtotal || 0
@@ -285,7 +284,7 @@ export default function ViewInvoicePage() {
       `─────────────────────\n` +
       `*Subtotal:* Rs.${subtotal.toLocaleString("en-IN")}\n`
     if (discountAmount > 0) {
-      const discountLabel = invoice.discount_type === "percentage" ? `${invoice.discount_value}%` : `₹${invoice.discount_value}`
+      const discountLabel = invoice.discount_type === "percentage" ? `${Number(invoice.discount_value).toString()}%` : `₹${Number(invoice.discount_value).toString()}`
       msg += `*Discount (${discountLabel}):* -Rs.${discountAmount.toLocaleString("en-IN")}\n`
     }
     if (includeGst) {
@@ -299,7 +298,7 @@ export default function ViewInvoicePage() {
   }
 
   // =============================================
-  // PDF GENERATION – updated to include discount
+  // PDF GENERATION – with discount label fixed
   // =============================================
   const handleDownloadPdf = async (stampToggle: boolean = false) => {
     if (!invoice) return
@@ -317,7 +316,7 @@ export default function ViewInvoicePage() {
       const themeColor = profile?.theme_color ?? "#185FA5"
       const [tr, tg, tb] = hexToRgb(themeColor)
 
-      // ===== PRE-FETCH ALL IMAGES ONCE =====
+      // ===== PRE-FETCH IMAGES =====
       const headerStyle = profile?.header_style ?? "single_logo"
       let bannerBase64: string | null = null
       let bannerH = 0
@@ -377,7 +376,7 @@ export default function ViewInvoicePage() {
       const renderInvoice = (doc: jsPDF, pageH: number): number => {
         let y = margin
 
-        // ===== HEADER SECTION =====
+        // HEADER
         if (headerStyle === "thumbnail" && bannerBase64) {
           const bannerW = pageW - (margin * 2)
           doc.addImage(bannerBase64, "PNG", margin, y, bannerW, bannerH)
@@ -385,7 +384,7 @@ export default function ViewInvoicePage() {
         } else if (headerStyle === "single_logo") {
           y = renderSingleLogoHeader(doc, profile, y, logoBase64, pageW, margin, [tr, tg, tb])
         } else {
-          // Default legacy header
+          // Legacy header
           let logoX = margin
           let logoAdded = false
           if (logoBase64) {
@@ -491,7 +490,7 @@ export default function ViewInvoicePage() {
 
         y += 3
 
-        // ===== ITEMS TABLE =====
+        // ITEMS TABLE
         const tableBody = items.map((item, idx) => [
           String(idx + 1),
           safeStr(item.particulars ?? item.description ?? item.name ?? "-"),
@@ -530,7 +529,7 @@ export default function ViewInvoicePage() {
 
         y = (doc as any).lastAutoTable.finalY + 8
 
-        // ===== TOTALS with discount =====
+        // ---- TOTALS with fixed discount label ----
         doc.setFont('helvetica', 'normal')
         doc.setFontSize(9)
         doc.setTextColor(0, 0, 0)
@@ -539,9 +538,10 @@ export default function ViewInvoicePage() {
         doc.text('Rs. ' + subtotal.toLocaleString('en-IN'), 195, y, { align: 'right' })
         y += 4
 
-        // Discount line if any
+        // Discount line – fixed formatting
         if (discountAmount > 0) {
-          const discountLabel = discountType === "percentage" ? `${discountValue}%` : `₹${discountValue}`
+          const discountValueFormatted = Number(discountValue).toString()
+          const discountLabel = discountType === "percentage" ? `${discountValueFormatted}%` : `₹${discountValueFormatted}`
           doc.text(`Discount (${discountLabel}):`, 160, y, { align: 'right' })
           doc.setTextColor(200, 0, 0)
           doc.text('- Rs. ' + discountAmount.toLocaleString('en-IN'), 195, y, { align: 'right' })
@@ -579,7 +579,7 @@ export default function ViewInvoicePage() {
         doc.text(('RUPEES ' + toWords(Math.round(inWordsAmount)) + ' ONLY').toUpperCase(), margin, y)
         y += 20
 
-        // ===== PAYMENT DETAILS =====
+        // PAYMENT DETAILS
         y += 10
         doc.setFontSize(9)
         doc.setFont("helvetica", "bold")
@@ -610,7 +610,7 @@ export default function ViewInvoicePage() {
           y += 4
         }
 
-        // ===== TAX INFORMATION – only if GST included =====
+        // TAX INFORMATION
         if (invoice.include_gst) {
           y += 6
           doc.setFontSize(9)
@@ -635,7 +635,7 @@ export default function ViewInvoicePage() {
           y += 6
         }
 
-        // ===== NOTES =====
+        // NOTES
         if (invoice.notes) {
           y += 3
           doc.setFontSize(9)
@@ -650,7 +650,7 @@ export default function ViewInvoicePage() {
           y += (noteLines.length * 4)
         }
 
-        // ===== FOOTER =====
+        // FOOTER
         y += 10
         doc.setFont('helvetica', 'normal')
         doc.setFontSize(9)
@@ -662,7 +662,7 @@ export default function ViewInvoicePage() {
 
         let contentBottom = y + 12
 
-        // ===== STAMP =====
+        // STAMP
         if (stampToggle && stampBase64) {
           let stampY = y + 18
           const stampW = 30
@@ -684,7 +684,7 @@ export default function ViewInvoicePage() {
           contentBottom = Math.max(contentBottom, stampY)
         }
 
-        // ===== BOTTOM LINE =====
+        // BOTTOM LINE
         const footerY = contentBottom + 12
         doc.setFontSize(8)
         doc.setTextColor(150, 150, 150)
@@ -694,11 +694,11 @@ export default function ViewInvoicePage() {
         return footerY + 8
       }
 
-      // ===== PASS 1: measure =====
+      // PASS 1: measure
       const scratchDoc = new jsPDF({ orientation: "portrait", unit: "mm", format: [pageW, 2000] })
       const measuredHeight = renderInvoice(scratchDoc, 2000)
 
-      // ===== PASS 2: final =====
+      // PASS 2: final
       const finalPageHeight = Math.max(measuredHeight, 100)
       const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: [pageW, finalPageHeight] })
       renderInvoice(doc, finalPageHeight)
@@ -1010,7 +1010,7 @@ export default function ViewInvoicePage() {
               {discountAmount > 0 && (
                 <div className="flex justify-between w-full text-sm">
                   <span className="text-muted-foreground">
-                    Discount {discountType === "percentage" ? `(${discountValue}%)` : `(₹${discountValue})`}:
+                    Discount {discountType === "percentage" ? `(${Number(discountValue).toString()}%)` : `(₹${Number(discountValue).toString()})`}:
                   </span>
                   <span className="font-medium text-red-600">- ₹{discountAmount.toLocaleString("en-IN")}</span>
                 </div>
