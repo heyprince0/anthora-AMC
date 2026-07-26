@@ -539,10 +539,12 @@ export default function ViewInvoicePage() {
         doc.text('Rs. ' + subtotal.toLocaleString('en-IN'), 195, y, { align: 'right' })
         y += 4
 
-        // Discount line – fixed formatting: no quotes, integer value
+        // Discount line – uses "Rs." like the other totals lines above/below it.
+        // (The ₹ glyph isn't in jsPDF's standard helvetica font encoding, which
+        // was breaking the whole line's letter-spacing in the rendered PDF.)
         if (discountAmount > 0) {
           const discountVal = Number(discountValue).toString() // ensures integer without decimals
-          const discountLabel = discountType === "percentage" ? `${discountVal}%` : `₹${discountVal}`
+          const discountLabel = discountType === "percentage" ? `${discountVal}%` : `Rs. ${discountVal}`
           doc.text(`Discount (${discountLabel}):`, 160, y, { align: 'right' })
           doc.setTextColor(200, 0, 0)
           doc.text('- Rs. ' + discountAmount.toLocaleString('en-IN'), 195, y, { align: 'right' })
