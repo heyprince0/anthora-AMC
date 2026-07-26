@@ -170,6 +170,14 @@ export default function QuotationsPage() {
   const handleNewQuotationClick = async () => {
     if (!user?.id || !currentOrgId) return
 
+    // ✅ Don't let the click through until we actually know the plan status.
+    // Without this, a fast click right after page load could sneak past the
+    // expired/limit check because `status` hasn't been fetched yet.
+    if (limitsLoading) {
+      toast.error("Checking your plan status, please try again in a moment...")
+      return
+    }
+
     // ✅ Check limits before anything else
     if (checkAndShowLimitModal()) return
 
@@ -221,7 +229,7 @@ export default function QuotationsPage() {
             <h1 className="text-2xl font-bold text-foreground">Quotation</h1>
             <p className="text-muted-foreground">Create and manage customers quotations</p>
           </div>
-          <Button onClick={handleNewQuotationClick} disabled={checkingProfile}>
+          <Button onClick={handleNewQuotationClick} disabled={checkingProfile || limitsLoading}>
             <Plus className="mr-2 size-4" />
             New Quotation
           </Button>
