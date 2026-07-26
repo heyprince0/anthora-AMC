@@ -40,7 +40,7 @@ export default function StocksPage() {
   const [categories, setCategories] = useState<any[]>([])
 
   // Plan limits
-  const { maxInventory, currentInventoryCount, status } = usePlanLimits(currentOrgId)
+  const { maxInventory, currentInventoryCount, status, planName, isLoading: limitsLoading } = usePlanLimits(currentOrgId)
 
   // Limit modal state
   const [showLimitModal, setShowLimitModal] = useState(false)
@@ -160,7 +160,10 @@ export default function StocksPage() {
   const checkAndShowLimitModal = () => {
     if (status === 'expired' || status === 'cancelled') {
       setLimitModalType('expired')
-      setLimitModalCustom({})
+      setLimitModalCustom({
+        title: `Your ${planName || 'current'} plan has expired`,
+        description: `Renew your ${planName || 'current'} plan to continue adding inventory items.`,
+      })
       setShowLimitModal(true)
       return true
     }
@@ -177,6 +180,10 @@ export default function StocksPage() {
   }
 
   const handleAddItem = () => {
+    if (limitsLoading) {
+      toast.error("Checking your plan status, please try again in a moment...")
+      return
+    }
     if (checkAndShowLimitModal()) return
     setEditingItem(null)
     setSheetOpen(true)
