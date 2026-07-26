@@ -85,6 +85,7 @@ export default function DashboardPage() {
   const [contractCount, setContractCount] = useState(0)
   const [showLimitModal, setShowLimitModal] = useState(false)
   const [limitModalType, setLimitModalType] = useState<LimitModalType>('expired')
+  const [limitModalCustom, setLimitModalCustom] = useState<{ title?: string; description?: string }>({})
   const [limitValue, setLimitValue] = useState(0)
 
   const [showPlanModal, setShowPlanModal] = useState(false)
@@ -371,6 +372,10 @@ export default function DashboardPage() {
 
     if (isExpired) {
       setLimitModalType('expired')
+      setLimitModalCustom({
+        title: `Your ${plan?.name || 'current'} plan has expired`,
+        description: `Renew your ${plan?.name || 'current'} plan to keep using all features.`,
+      })
       setShowLimitModal(true)
       if (showOnLoad) setAutoShown(true)
       return true
@@ -379,6 +384,7 @@ export default function DashboardPage() {
     const maxContracts = plan?.max_contracts ?? 99999
     if (contractCount >= maxContracts) {
       setLimitModalType('contracts-limit')
+      setLimitModalCustom({})
       setLimitValue(maxContracts)
       setShowLimitModal(true)
       if (showOnLoad) setAutoShown(true)
@@ -706,6 +712,8 @@ export default function DashboardPage() {
           type={limitModalType}
           onUpgrade={handleViewPlans}
           limitValue={limitValue}
+          customTitle={limitModalCustom.title}
+          customDescription={limitModalCustom.description}
         />
 
         <PlanSelectionModal
