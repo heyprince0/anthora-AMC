@@ -9,9 +9,16 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { supabase, type Invoice, type QuotationItem } from "@/lib/supabase"
 import { useAuth } from "@/lib/auth-context"
-import { Plus, Trash2, Save, ArrowLeft, Loader2 } from "lucide-react"
+import { Plus, Trash2, Save, ArrowLeft, Loader2, Percent } from "lucide-react"
 import { toast } from "sonner"
 import Link from "next/link"
 
@@ -34,11 +41,13 @@ export default function EditInvoicePage() {
   const [items, setItems] = useState<QuotationItem[]>([])
   const [includeGst, setIncludeGst] = useState(true)
   const [gstRate, setGstRate] = useState(18)
+  const [discountType, setDiscountType] = useState<"percentage" | "fixed">("percentage")
+  const [discountValue, setDiscountValue] = useState(0)
   const [notes, setNotes] = useState("")
   const [invoiceDate, setInvoiceDate] = useState("")
   const [dueDate, setDueDate] = useState("")
   const [paymentTerms, setPaymentTerms] = useState("")
-  const [clientGstin, setClientGstin] = useState("") // NEW
+  const [clientGstin, setClientGstin] = useState("")
 
   // --- organization ID ---
   const [currentOrgId, setCurrentOrgId] = useState<string | null>(null)
@@ -94,11 +103,13 @@ export default function EditInvoicePage() {
       setItems(invoice.items)
       setIncludeGst(invoice.include_gst)
       setGstRate(invoice.gst_rate || 18)
+      setDiscountType(invoice.discount_type === "fixed" ? "fixed" : "percentage")
+      setDiscountValue(typeof invoice.discount_value === "number" ? invoice.discount_value : 0)
       setNotes(invoice.notes || "")
       setInvoiceDate(invoice.invoice_date || "")
       setDueDate(invoice.due_date || "")
       setPaymentTerms(invoice.payment_terms || "")
-      setClientGstin(invoice.client_gstin || "") // NEW
+      setClientGstin(invoice.client_gstin || "")
     } catch (error) {
       console.error("Error loading invoice:", error)
       toast.error("Failed to load invoice")
@@ -159,9 +170,14 @@ export default function EditInvoicePage() {
       const calculatedSubtotal = (items ?? []).reduce((sum, item) => {
         return sum + (Number(item.quantity ?? 0) * Number(item.unit_price ?? 0))
       }, 0)
-      const sgst = includeGst ? Math.round(calculatedSubtotal * 0.09) : 0
-      const cgst = includeGst ? Math.round(calculatedSubtotal * 0.09) : 0
-      const grandTotal = calculatedSubtotal + sgst + cgst
+      const calculatedDiscountAmount = Math.min(
+        calculatedSubtotal,
+        Math.max(0, discountType === "percentage" ? calculatedSubtotal * (Number(discountValue) || 0) / 100 : Number(discountValue) || 0)
+      )
+      const discountedSubtotal = calculatedSubtotal - calculatedDiscountAmount
+      const sgst = includeGst ? Math.round(discountedSubtotal * 0.09) : 0
+      const cgst = includeGst ? Math.round(discountedSubtotal * 0.09) : 0
+      const grandTotal = discountedSubtotal + sgst + cgst
 
       // Update with org_id filter for safety
       const { error } = await supabase
@@ -172,12 +188,15 @@ export default function EditInvoicePage() {
           client_district: customerDistrict,
           client_state: customerState,
           client_pin_code: customerPinCode,
-          client_gstin: clientGstin || null, // NEW
+          client_gstin: clientGstin || null,
           order_no: orderNo || null,
           subject: subject,
           body_text: bodyText,
           items: items,
           subtotal: calculatedSubtotal,
+          discount_type: discountType,
+          discount_value: Number(discountValue) || 0,
+          discount_amount: calculatedDiscountAmount,
           sgst: sgst,
           cgst: cgst,
           grand_total: grandTotal,
@@ -202,10 +221,15 @@ export default function EditInvoicePage() {
     }
   }
 
-  // --- Compute subtotal, gstAmount, and total for display ---
+  // --- Compute subtotal, discount, gst, total for display ---
   const subtotal = items.reduce((sum, item) => sum + (item.quantity || 0) * (item.unit_price || 0), 0)
-  const gstAmount = includeGst ? subtotal * (gstRate / 100) : 0
-  const total = subtotal + gstAmount
+  const discountAmount = Math.min(
+    subtotal,
+    Math.max(0, discountType === "percentage" ? subtotal * (Number(discountValue) || 0) / 100 : Number(discountValue) || 0)
+  )
+  const discountedSubtotal = subtotal - discountAmount
+  const gstAmount = includeGst ? discountedSubtotal * (gstRate / 100) : 0
+  const total = discountedSubtotal + gstAmount
 
   if (loading) {
     return (
@@ -404,6 +428,44 @@ export default function EditInvoicePage() {
                 <span className="font-medium">₹{subtotal.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</span>
               </div>
 
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Percent className="size-4 text-muted-foreground shrink-0" />
+                  <Label className="text-sm text-muted-foreground shrink-0">Discount</Label>
+                  <Select value={discountType} onValueChange={(val) => setDiscountType(val as "percentage" | "fixed")}>
+                    <SelectTrigger className="h-9 w-[104px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="percentage">%</SelectItem>
+                      <SelectItem value="fixed">₹ Amount</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={discountValue}
+                    onFocus={(e) => e.target.value = ''}
+                    onBlur={(e) => {
+                      const val = parseFloat(e.target.value)
+                      setDiscountValue(isNaN(val) || val < 0 ? 0 : val)
+                    }}
+                    onChange={(e) => setDiscountValue(parseFloat(e.target.value) || 0)}
+                    placeholder={discountType === "percentage" ? "0" : "0.00"}
+                    className="h-9 w-28"
+                  />
+                </div>
+                {discountAmount > 0 && (
+                  <div className="flex justify-between items-center text-sm pl-6">
+                    <span className="text-muted-foreground">Discount Amount:</span>
+                    <span className="font-medium text-red-600">
+                      − ₹{discountAmount.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+                    </span>
+                  </div>
+                )}
+              </div>
+
               <div className="flex items-center gap-3">
                 <Checkbox
                   id="include-gst"
@@ -470,7 +532,6 @@ export default function EditInvoicePage() {
                 />
               </div>
             </div>
-            {/* NEW: Client GSTIN field */}
             <div className="space-y-2">
               <Label htmlFor="client-gstin">
                 Company GSTIN <span className="text-xs text-muted-foreground">(Optional)</span>
