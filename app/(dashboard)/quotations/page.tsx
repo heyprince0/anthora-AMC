@@ -55,7 +55,7 @@ export default function QuotationsPage() {
 
   const [currentOrgId, setCurrentOrgId] = useState<string | null>(null)
 
-  const { maxQuotationsMonthly, currentQuotationsThisMonth, status, isLoading: limitsLoading } = usePlanLimits(currentOrgId)
+  const { maxQuotationsMonthly, currentQuotationsThisMonth, status, planName, isLoading: limitsLoading } = usePlanLimits(currentOrgId)
 
   const [showLimitModal, setShowLimitModal] = useState(false)
   const [limitModalType, setLimitModalType] = useState<'expired' | 'resource-limit'>('expired')
@@ -151,7 +151,10 @@ export default function QuotationsPage() {
   const checkAndShowLimitModal = () => {
     if (status === 'expired' || status === 'cancelled') {
       setLimitModalType('expired')
-      setLimitModalCustom({})
+      setLimitModalCustom({
+        title: `Your ${planName || 'current'} plan has expired`,
+        description: `Renew your ${planName || 'current'} plan to continue creating quotations.`,
+      })
       setShowLimitModal(true)
       return true
     }
