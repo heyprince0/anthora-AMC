@@ -2,19 +2,32 @@
 
 import { useEffect, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
+import Link from "next/link"
 import { DashboardLayout } from "@/components/dashboard-layout"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { supabase, type Contract, type Customer, getDaysUntilService } from "@/lib/supabase"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { supabase, type Contract, type Customer, type ServiceHistory, type Technician, getDaysUntilService } from "@/lib/supabase"
 import { useAuth } from "@/lib/auth-context"
-import { ArrowLeft, FileText, Phone, MapPin, Calendar, DollarSign } from "lucide-react"
+import { ArrowLeft, FileText, Phone, MapPin, Calendar, DollarSign, StickyNote, Wrench, Eye } from "lucide-react"
 import { toast } from "sonner"
 
 interface ContractDisplay extends Contract {
   daysUntilService: number
   endDate: string | null
   customerName: string
+}
+
+interface ServiceRecord extends ServiceHistory {
+  technicianName: string
 }
 
 // Helper to compute contract end date (same as Contracts page)
@@ -39,6 +52,19 @@ function getStatusBadge(days: number, status: string) {
   return <Badge variant="outline">{status}</Badge>
 }
 
+function getServiceStatusBadge(status: string) {
+  switch (status) {
+    case "completed":
+      return <Badge className="bg-alert-success/10 text-alert-success border-alert-success/20">Completed</Badge>
+    case "partial":
+      return <Badge className="bg-alert-due-today/10 text-alert-due-today border-alert-due-today/20">Partial</Badge>
+    case "cancelled":
+      return <Badge className="bg-alert-overdue/10 text-alert-overdue border-alert-overdue/20">Cancelled</Badge>
+    default:
+      return <Badge variant="outline">{status}</Badge>
+  }
+}
+
 export default function ContractDetailPage() {
   const router = useRouter()
   const params = useParams()
@@ -47,6 +73,7 @@ export default function ContractDetailPage() {
 
   const [contract, setContract] = useState<ContractDisplay | null>(null)
   const [customer, setCustomer] = useState<Customer | null>(null)
+  const [serviceHistory, setServiceHistory] = useState<ServiceRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [currentOrgId, setCurrentOrgId] = useState<string | null>(null)
 
@@ -117,6 +144,31 @@ export default function ContractDetailPage() {
         endDate,
         customerName: customerData?.name || 'Unknown'
       })
+
+      // Fetch service history for this contract
+      const { data: historyData, error: historyError } = await supabase
+        .from('service_history')
+        .select('*')
+        .eq('contract_id', contractId)
+        .eq('org_id', currentOrgId)
+
+      if (historyError) throw historyError
+
+      // Fetch technicians to get names
+      const { data: techniciansData } = await supabase
+        .from('technicians')
+        .select('*')
+        .eq('org_id', currentOrgId)
+
+      const historyWithTechnicianNames = (historyData as ServiceHistory[])?.map(record => {
+        const technician = (techniciansData as Technician[])?.find(t => t.id === record.technician_id)
+        return {
+          ...record,
+          technicianName: technician?.name || 'Unknown'
+        }
+      }) || []
+
+      setServiceHistory(historyWithTechnicianNames)
     } catch (error) {
       console.error('Error loading contract details:', error)
       toast.error('Failed to load contract details')
@@ -186,13 +238,25 @@ export default function ContractDetailPage() {
                   <p className="font-medium text-foreground">{contract.contract_name}</p>
                 </div>
               </div>
+
               <div className="flex items-center gap-3">
                 <Phone className="size-4 text-muted-foreground" />
-                <div>
+                <div className="flex-1">
                   <p className="text-xs text-muted-foreground">Customer</p>
-                  <p className="font-medium text-foreground">{contract.customerName}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-foreground">{contract.customerName}</p>
+                    {customer && (
+                      <Link href={`/customers/${customer.id}`}>
+                        <Button variant="ghost" size="sm" className="h-6 gap-1 px-2 text-xs">
+                          <Eye className="size-3" />
+                          View
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
                 </div>
               </div>
+
               <div className="flex items-center gap-3">
                 <Calendar className="size-4 text-muted-foreground" />
                 <div>
@@ -200,6 +264,7 @@ export default function ContractDetailPage() {
                   <p className="font-medium text-foreground">{frequencyMonths} months</p>
                 </div>
               </div>
+
               <div className="flex items-center gap-3">
                 <DollarSign className="size-4 text-muted-foreground" />
                 <div>
@@ -211,6 +276,7 @@ export default function ContractDetailPage() {
                   </p>
                 </div>
               </div>
+
               <div className="flex items-center gap-3">
                 <Calendar className="size-4 text-muted-foreground" />
                 <div>
@@ -218,6 +284,7 @@ export default function ContractDetailPage() {
                   <p className="font-medium text-foreground">{contract.endDate || '—'}</p>
                 </div>
               </div>
+
               <div className="flex items-center gap-3">
                 <Calendar className="size-4 text-muted-foreground" />
                 <div>
@@ -225,6 +292,7 @@ export default function ContractDetailPage() {
                   <p className="font-medium text-foreground">{contract.start_date || '—'}</p>
                 </div>
               </div>
+
               <div className="flex items-center gap-3">
                 <Calendar className="size-4 text-muted-foreground" />
                 <div>
@@ -232,6 +300,7 @@ export default function ContractDetailPage() {
                   <p className="font-medium text-foreground">{contract.next_service_date || '—'}</p>
                 </div>
               </div>
+
               <div className="flex items-center gap-3">
                 <FileText className="size-4 text-muted-foreground" />
                 <div>
@@ -239,7 +308,77 @@ export default function ContractDetailPage() {
                   {getStatusBadge(contract.daysUntilService, contract.status)}
                 </div>
               </div>
+
+              <div className="flex items-start gap-3 sm:col-span-2">
+                <MapPin className="size-4 text-muted-foreground shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Location</p>
+                  <p className="font-medium text-foreground">{contract.location || '—'}</p>
+                </div>
+              </div>
+
+              {contract.notes && (
+                <div className="flex items-start gap-3 sm:col-span-2">
+                  <StickyNote className="size-4 text-muted-foreground shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Notes</p>
+                    <p className="font-medium text-foreground whitespace-pre-wrap">{contract.notes}</p>
+                  </div>
+                </div>
+              )}
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Service History Section — same card UI/UX as Customer Details page */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Wrench className="size-5" />
+              Service History
+            </CardTitle>
+            <CardDescription>
+              {serviceHistory.length} service record{serviceHistory.length !== 1 ? 's' : ''} for this contract
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {serviceHistory.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No service history found for this contract
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Technician</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="max-w-[200px]">Notes</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {serviceHistory.map((record) => (
+                      <TableRow key={record.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Calendar className="size-4 text-muted-foreground" />
+                            {record.service_date}
+                          </div>
+                        </TableCell>
+                        <TableCell>{record.technicianName}</TableCell>
+                        <TableCell>{getServiceStatusBadge(record.status)}</TableCell>
+                        <TableCell className="max-w-[200px]">
+                          <span className="text-sm text-muted-foreground line-clamp-2">
+                            {record.notes || '—'}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
