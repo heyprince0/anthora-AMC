@@ -568,6 +568,11 @@ export default function ViewInvoicePage() {
           doc.text('Total:', 160, y, { align: 'right' })
           doc.text('Rs. ' + grandTotal.toLocaleString('en-IN'), 195, y, { align: 'right' })
         } else {
+          y += 3
+          doc.setDrawColor(0, 0, 0)
+          doc.setLineWidth(0.3)
+          doc.line(140, y, 195, y)
+          y += 4
           doc.setFont('helvetica', 'bold')
           doc.setFontSize(10)
           doc.text('Total:', 160, y, { align: 'right' })
