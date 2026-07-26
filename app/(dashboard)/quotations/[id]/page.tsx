@@ -266,24 +266,26 @@ export default function ViewQuotationPage() {
     }))
   }
 
-  const calculateTotals = () => {
-    if (!quotation) return { subtotal: 0, sgst: 0, cgst: 0, grandTotal: 0 }
-    const items = quotation.items ?? []
-    const subtotal = items.reduce((sum, item) =>
-      sum + (Number(item.qty ?? item.quantity ?? 1) * Number(item.rate ?? item.unit_price ?? 0)), 0)
-    const includeGst = quotation.include_gst ?? true
-    const sgst = includeGst ? Math.round(subtotal * 0.09) : 0
-    const cgst = includeGst ? Math.round(subtotal * 0.09) : 0
-    const grandTotal = subtotal + sgst + cgst
-    return { subtotal, sgst, cgst, grandTotal }
+  // ============================================================
+  // UPDATED: calculate totals using stored discount fields
+  // ============================================================
+  const getTotals = () => {
+    if (!quotation) return { subtotal: 0, discountAmount: 0, discountType: null, discountValue: 0, discountedSubtotal: 0, sgst: 0, cgst: 0, grandTotal: 0 }
+    const subtotal = quotation.subtotal || 0
+    const discountAmount = quotation.discount_amount || 0
+    const discountedSubtotal = subtotal - discountAmount
+    const sgst = quotation.sgst || 0
+    const cgst = quotation.cgst || 0
+    const grandTotal = quotation.grand_total || 0
+    return { subtotal, discountAmount, discountType: quotation.discount_type, discountValue: quotation.discount_value || 0, discountedSubtotal, sgst, cgst, grandTotal }
   }
 
   const handleWhatsApp = () => {
     if (!quotation) return
-    const { subtotal, sgst, cgst, grandTotal } = calculateTotals()
+    const { subtotal, discountAmount, discountedSubtotal, sgst, cgst, grandTotal } = getTotals()
     const items = quotation.items ?? []
     const includeGst = quotation.include_gst ?? true
-    const msg =
+    let msg =
       `*Quotation - ${safeStr(profile?.company_name)}*\n` +
       `Quote No: ${safeStr(quotation.quote_no)}\n` +
       `Date: ${safeDate(quotation.created_at)}\n` +
@@ -295,9 +297,16 @@ export default function ViewQuotationPage() {
         `• ${i.particulars ?? i.description ?? i.name ?? "-"} - Rs.${Number(i.amount ?? 0).toLocaleString("en-IN")}`
       ).join("\n") + "\n" +
       `─────────────────────\n` +
-      `*Subtotal:* Rs.${subtotal.toLocaleString("en-IN")}\n` +
-      (includeGst ? `*SGST (9%):* Rs.${sgst.toLocaleString("en-IN")}\n*CGST (9%):* Rs.${cgst.toLocaleString("en-IN")}\n` : ``) +
-      `*Total:* Rs.${grandTotal.toLocaleString("en-IN")}\n` +
+      `*Subtotal:* Rs.${subtotal.toLocaleString("en-IN")}\n`
+    if (discountAmount > 0) {
+      const discountLabel = quotation.discount_type === "percentage" ? `${quotation.discount_value}%` : `₹${quotation.discount_value}`
+      msg += `*Discount (${discountLabel}):* -Rs.${discountAmount.toLocaleString("en-IN")}\n`
+      msg += `*Subtotal after Discount:* Rs.${discountedSubtotal.toLocaleString("en-IN")}\n`
+    }
+    if (includeGst) {
+      msg += `*SGST (9%):* Rs.${sgst.toLocaleString("en-IN")}\n*CGST (9%):* Rs.${cgst.toLocaleString("en-IN")}\n`
+    }
+    msg += `*Total:* Rs.${grandTotal.toLocaleString("en-IN")}\n` +
       `─────────────────────\n\n` +
       `To confirm reply YES or call ${safeStr(profile?.company_phone)}\n\n` +
       `_Powered by Remindi_`
@@ -305,7 +314,7 @@ export default function ViewQuotationPage() {
   }
 
   // ============================================================
-  // PDF GENERATION – with improved stamp handling
+  // PDF GENERATION – with discount rows
   // ============================================================
   const handleDownloadPdf = async (stampToggle: boolean = false) => {
     if (!quotation) return
@@ -323,7 +332,7 @@ export default function ViewQuotationPage() {
       const themeColor = profile?.theme_color ?? "#185FA5"
       const [tr, tg, tb] = hexToRgb(themeColor)
 
-      // ===== PRE-FETCH ALL IMAGES ONCE (so we don't hit the network twice across the two render passes) =====
+      // ===== PRE-FETCH ALL IMAGES ONCE =====
       const headerStyle = profile?.header_style ?? "single_logo"
       let bannerBase64: string | null = null
       let bannerH = 0
@@ -337,9 +346,6 @@ export default function ViewQuotationPage() {
             reader.readAsDataURL(blob)
           })
 
-          // Read the image's ACTUAL dimensions instead of assuming a fixed
-          // 1462x396 ratio — prevents distortion/stretching for any image
-          // that doesn't match that exact size.
           const naturalSize = await new Promise<{ w: number; h: number }>((resolve, reject) => {
             const img = new Image()
             img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight })
@@ -349,10 +355,6 @@ export default function ViewQuotationPage() {
 
           const bannerW = pageW - (margin * 2)
           bannerH = Math.round(bannerW / (naturalSize.w / naturalSize.h))
-
-          // Guard against unreasonably tall banners (e.g. a near-square or
-          // portrait image accidentally used here) eating the whole page —
-          // cap at a sensible max height.
           const maxBannerH = 60
           if (bannerH > maxBannerH) bannerH = maxBannerH
         } catch (e) { /* skip banner silently */ }
@@ -395,30 +397,27 @@ export default function ViewQuotationPage() {
       }
 
       const items = quotation.items ?? []
-      const { subtotal, sgst, cgst, grandTotal } = calculateTotals()
+      const { subtotal, discountAmount, discountType, discountValue, discountedSubtotal, sgst, cgst, grandTotal } = getTotals()
 
-      // ===== SINGLE RENDER FUNCTION — draws the whole quotation onto whatever doc it's given =====
-      // Returns the bottom-most Y position content actually reached, so we can size the page to fit.
+      // ===== SINGLE RENDER FUNCTION =====
       const renderQuotation = (doc: jsPDF): number => {
         let y = margin
 
-        // ===== HEADER SECTION =====
+        // ===== HEADER =====
         if (headerStyle === "thumbnail" && bannerBase64) {
           const bannerW = pageW - (margin * 2)
           doc.addImage(bannerBase64, "PNG", margin, y, bannerW, bannerH)
           y += bannerH +6
         } else if (headerStyle === "single_logo") {
-          // Use new single logo header layout
           y = renderSingleLogoHeader(doc, profile, y, logoBase64, pageW, margin, [tr, tg, tb])
         } else {
-          // Default legacy header
+          // Legacy header
           let logoX = margin
           let logoAdded = false
           if (logoBase64) {
             doc.addImage(logoBase64, "PNG", logoX, y, 22, 22)
             logoAdded = true
           }
-
           const infoX = logoAdded ? logoX + 24 : logoX
           doc.setFontSize(14)
           doc.setFont("helvetica", "bold")
@@ -557,21 +556,38 @@ export default function ViewQuotationPage() {
             4: { cellWidth: 35, halign: "right" },
           },
           margin: { left: margin, right: margin },
-          // Critical: never let autoTable break onto a new page — this page is sized to fit everything.
           pageBreak: "avoid",
           rowPageBreak: "avoid",
         })
 
         y = (doc as any).lastAutoTable.finalY + 8
 
-        // ===== TOTALS =====
-        if (quotation.include_gst) {
-          doc.setFont('helvetica', 'normal')
-          doc.setFontSize(9)
+        // ===== TOTALS (with discount) =====
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(9)
+        doc.setTextColor(0, 0, 0)
+
+        // Subtotal
+        doc.text('Subtotal:', 160, y, { align: 'right' })
+        doc.text('Rs. ' + subtotal.toLocaleString('en-IN'), 195, y, { align: 'right' })
+        y += 4
+
+        // Discount row (if any)
+        if (discountAmount > 0) {
+          const discountLabel = discountType === "percentage" ? `${discountValue}%` : `₹${discountValue}`
+          doc.text(`Discount (${discountLabel}):`, 160, y, { align: 'right' })
+          doc.setTextColor(200, 0, 0)
+          doc.text('- Rs. ' + discountAmount.toLocaleString('en-IN'), 195, y, { align: 'right' })
           doc.setTextColor(0, 0, 0)
-          doc.text('Subtotal:', 160, y, { align: 'right' })
-          doc.text('Rs. ' + subtotal.toLocaleString('en-IN'), 195, y, { align: 'right' })
           y += 4
+        }
+
+        // Subtotal after Discount
+        doc.text('Subtotal after Discount:', 160, y, { align: 'right' })
+        doc.text('Rs. ' + discountedSubtotal.toLocaleString('en-IN'), 195, y, { align: 'right' })
+        y += 4
+
+        if (quotation.include_gst) {
           doc.text('SGST (9%):', 160, y, { align: 'right' })
           doc.text('Rs. ' + sgst.toLocaleString('en-IN'), 195, y, { align: 'right' })
           y += 4
@@ -587,10 +603,10 @@ export default function ViewQuotationPage() {
           doc.text('Total:', 160, y, { align: 'right' })
           doc.text('Rs. ' + grandTotal.toLocaleString('en-IN'), 195, y, { align: 'right' })
         } else {
-          doc.setFont('helvetica', 'normal')
-          doc.setFontSize(9)
+          doc.setFont('helvetica', 'bold')
+          doc.setFontSize(10)
           doc.text('Total:', 160, y, { align: 'right' })
-          doc.text('Rs. ' + subtotal.toLocaleString('en-IN'), 195, y, { align: 'right' })
+          doc.text('Rs. ' + grandTotal.toLocaleString('en-IN'), 195, y, { align: 'right' })
         }
 
         // ===== IN WORDS =====
@@ -598,7 +614,7 @@ export default function ViewQuotationPage() {
         doc.setFont('helvetica', 'bold')
         doc.setFontSize(9)
         doc.setTextColor(0, 0, 0)
-        const inWordsAmount = quotation.include_gst ? grandTotal : subtotal
+        const inWordsAmount = grandTotal
         doc.text(('RUPEES ' + toWords(Math.round(inWordsAmount)) + ' ONLY').toUpperCase(), margin, y)
         y += 20
 
@@ -619,7 +635,7 @@ export default function ViewQuotationPage() {
           if (quotation.payment_terms) { doc.text(`Payment Terms: ${safeStr(quotation.payment_terms)}`, margin, y); y += 4 }
         }
 
-        // ===== TAX INFORMATION – now shown only if GST is included =====
+        // ===== TAX INFORMATION =====
         if (quotation.include_gst) {
           y += 6
           doc.setFontSize(9)
@@ -633,7 +649,7 @@ export default function ViewQuotationPage() {
           if (profile?.pan_number) { doc.text(`PAN: ${safeStr(profile.pan_number)}`, margin, y); y += 4 }
           doc.text("GST @ 18% will be charged as per applicable rules.", margin, y)
           y += 4
-          y += 6 // spacing after the block
+          y += 6
         }
 
         // ===== NOTES =====
@@ -695,11 +711,11 @@ export default function ViewQuotationPage() {
         return footerY + 8
       }
 
-      // ===== PASS 1: measure — draw onto a tall scratch page to find out how much height we actually need =====
+      // ===== PASS 1: measure =====
       const scratchDoc = new jsPDF({ orientation: "portrait", unit: "mm", format: [pageW, 2000] })
       const measuredHeight = renderQuotation(scratchDoc)
 
-      // ===== PASS 2: final — create a page sized exactly to the content and draw for real =====
+      // ===== PASS 2: final =====
       const finalPageHeight = Math.max(measuredHeight, 100)
       const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: [pageW, finalPageHeight] })
       renderQuotation(doc)
@@ -739,9 +755,10 @@ export default function ViewQuotationPage() {
     )
   }
 
-  const mappedItems = getMappedItems()
-  const { subtotal, sgst, cgst, grandTotal } = calculateTotals()
+  // ===== Totals for UI =====
+  const { subtotal, discountAmount, discountType, discountValue, discountedSubtotal, sgst, cgst, grandTotal } = getTotals()
   const includeGst = quotation.include_gst ?? true
+  const mappedItems = getMappedItems()
 
   return (
     <DashboardLayout>
@@ -937,16 +954,35 @@ export default function ViewQuotationPage() {
           </CardContent>
         </Card>
 
-        {/* TOTALS */}
+        {/* ===== TOTALS (with discount) ===== */}
         <Card>
           <CardContent className="pt-6">
             <div className="flex flex-col items-end gap-3 max-w-xs ml-auto">
-              {includeGst ? (
+              {/* Subtotal */}
+              <div className="flex justify-between w-full text-sm">
+                <span className="text-muted-foreground">Subtotal:</span>
+                <span className="font-medium">₹{subtotal.toLocaleString("en-IN")}</span>
+              </div>
+
+              {/* Discount (if any) */}
+              {discountAmount > 0 && (
+                <div className="flex justify-between w-full text-sm">
+                  <span className="text-muted-foreground">
+                    Discount ({discountType === "percentage" ? `${discountValue}%` : `₹${discountValue}`}):
+                  </span>
+                  <span className="font-medium text-red-600">- ₹{discountAmount.toLocaleString("en-IN")}</span>
+                </div>
+              )}
+
+              {/* Subtotal after Discount */}
+              <div className="flex justify-between w-full text-sm border-t border-border/50 pt-1">
+                <span className="text-muted-foreground">Subtotal after Discount:</span>
+                <span className="font-medium">₹{discountedSubtotal.toLocaleString("en-IN")}</span>
+              </div>
+
+              {/* GST */}
+              {includeGst && (
                 <>
-                  <div className="flex justify-between w-full text-sm">
-                    <span className="text-muted-foreground">Subtotal:</span>
-                    <span className="font-medium">₹{subtotal.toLocaleString("en-IN")}</span>
-                  </div>
                   <div className="flex justify-between w-full text-sm">
                     <span className="text-muted-foreground">SGST (9%):</span>
                     <span className="font-medium">₹{sgst.toLocaleString("en-IN")}</span>
@@ -955,21 +991,16 @@ export default function ViewQuotationPage() {
                     <span className="text-muted-foreground">CGST (9%):</span>
                     <span className="font-medium">₹{cgst.toLocaleString("en-IN")}</span>
                   </div>
-                  <div className="border-t border-border pt-2 mt-1 flex justify-between w-full">
-                    <span className="text-lg font-bold">Grand Total:</span>
-                    <span className="text-lg font-bold text-blue-600">
-                      ₹{grandTotal.toLocaleString("en-IN")}
-                    </span>
-                  </div>
                 </>
-              ) : (
-                <div className="flex justify-between w-full">
-                  <span className="text-lg font-bold">Total:</span>
-                  <span className="text-lg font-bold text-blue-600">
-                    ₹{subtotal.toLocaleString("en-IN")}
-                  </span>
-                </div>
               )}
+
+              {/* Grand Total */}
+              <div className="border-t border-border pt-2 mt-1 flex justify-between w-full">
+                <span className="text-lg font-bold">Grand Total:</span>
+                <span className="text-lg font-bold text-blue-600">
+                  ₹{grandTotal.toLocaleString("en-IN")}
+                </span>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -1084,6 +1115,11 @@ export default function ViewQuotationPage() {
                 <p className="text-muted-foreground">
                   <span className="font-medium text-foreground">Subtotal:</span> ₹{quotation.subtotal.toLocaleString("en-IN")}
                 </p>
+                {quotation.discount_amount && quotation.discount_amount > 0 && (
+                  <p className="text-muted-foreground">
+                    <span className="font-medium text-foreground">Discount:</span> -₹{quotation.discount_amount.toLocaleString("en-IN")}
+                  </p>
+                )}
                 {quotation.include_gst && (
                   <>
                     <p className="text-muted-foreground">
