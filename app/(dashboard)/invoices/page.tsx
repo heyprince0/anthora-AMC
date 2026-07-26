@@ -75,7 +75,7 @@ export default function InvoicesPage() {
 
   const [currentOrgId, setCurrentOrgId] = useState<string | null>(null)
 
-  const { maxInvoicesMonthly, currentInvoicesThisMonth, status, isLoading: limitsLoading } = usePlanLimits(currentOrgId)
+  const { maxInvoicesMonthly, currentInvoicesThisMonth, status, planName, isLoading: limitsLoading } = usePlanLimits(currentOrgId)
 
   const [showLimitModal, setShowLimitModal] = useState(false)
   const [limitModalType, setLimitModalType] = useState<'expired' | 'resource-limit'>('expired')
@@ -168,7 +168,10 @@ export default function InvoicesPage() {
   const checkAndShowLimitModal = () => {
     if (status === 'expired' || status === 'cancelled') {
       setLimitModalType('expired')
-      setLimitModalCustom({})
+      setLimitModalCustom({
+        title: `Your ${planName || 'current'} plan has expired`,
+        description: `Renew your ${planName || 'current'} plan to continue creating invoices.`,
+      })
       setShowLimitModal(true)
       return true
     }
