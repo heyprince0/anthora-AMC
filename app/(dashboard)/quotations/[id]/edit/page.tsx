@@ -5,50 +5,53 @@ import { useParams, useRouter } from "next/navigation"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { supabase, type Quotation, type QuotationItem } from "@/lib/supabase"
+import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/lib/auth-context"
-import { Plus, Trash2, Save, ArrowLeft, Loader2, Percent } from "lucide-react"
+import { ArrowLeft, Edit, Download, Printer } from "lucide-react"
 import { toast } from "sonner"
 import Link from "next/link"
+import { format } from "date-fns"
+import jsPDF from "jspdf"
+import autoTable from "jspdf-autotable"
 
-export default function EditQuotationPage() {
+interface QuotationWithDetails {
+  id: string
+  quote_no: string
+  order_no: string | null
+  client_name: string
+  client_address: string | null
+  client_district: string | null
+  client_state: string | null
+  client_pin_code: string | null
+  subject: string | null
+  body_text: string | null
+  items: any[]
+  subtotal: number
+  discount_type: "percentage" | "fixed" | null
+  discount_value: number | null
+  discount_amount: number | null
+  sgst: number
+  cgst: number
+  grand_total: number
+  include_gst: boolean
+  gst_rate: number
+  notes: string | null
+  status: string
+  created_at: string
+  updated_at: string
+  valid_till: string | null
+}
+
+export default function ViewQuotationPage() {
   const params = useParams()
   const router = useRouter()
   const { user } = useAuth()
   const id = params.id as string
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-
-  const [customerName, setCustomerName] = useState("")
-  const [customerAddress, setCustomerAddress] = useState("")
-  const [customerDistrict, setCustomerDistrict] = useState("")
-  const [customerState, setCustomerState] = useState("")
-  const [customerPinCode, setCustomerPinCode] = useState("")
-  const [orderNo, setOrderNo] = useState("")
-  const [subject, setSubject] = useState("")
-  const [bodyText, setBodyText] = useState("")
-  const [items, setItems] = useState<QuotationItem[]>([])
-  const [includeGst, setIncludeGst] = useState(true)
-  const [gstRate, setGstRate] = useState(18)
-  const [discountType, setDiscountType] = useState<"percentage" | "fixed">("percentage")
-  const [discountValue, setDiscountValue] = useState(0)
-  const [notes, setNotes] = useState("")
-
-  // --- ADDED: organization ID ---
+  const [quotation, setQuotation] = useState<QuotationWithDetails | null>(null)
   const [currentOrgId, setCurrentOrgId] = useState<string | null>(null)
 
-  // --- fetch org_id on mount ---
+  // Fetch organization ID
   useEffect(() => {
     if (user?.id) {
       supabase
@@ -67,7 +70,7 @@ export default function EditQuotationPage() {
     }
   }, [user?.id])
 
-  // Load quotation only when org_id is available
+  // Load quotation
   useEffect(() => {
     if (id && currentOrgId) {
       loadQuotation()
@@ -82,26 +85,11 @@ export default function EditQuotationPage() {
         .from("quotations")
         .select("*")
         .eq("id", id)
-        .eq("org_id", currentOrgId)   // <-- changed from user_id
+        .eq("org_id", currentOrgId)
         .single()
 
       if (error) throw error
-
-      const quotation = data as Quotation
-      setCustomerName(quotation.client_name)
-      setCustomerAddress(quotation.client_address || "")
-      setCustomerDistrict(quotation.client_district || "")
-      setCustomerState(quotation.client_state || "")
-      setCustomerPinCode(quotation.client_pin_code || "")
-      setOrderNo(quotation.order_no || "")
-      setSubject(quotation.subject || "")
-      setBodyText(quotation.body_text || "")
-      setItems(quotation.items)
-      setIncludeGst(quotation.include_gst)
-      setGstRate(quotation.gst_rate || 18)
-      setDiscountType(quotation.discount_type === "fixed" ? "fixed" : "percentage")
-      setDiscountValue(typeof quotation.discount_value === "number" ? quotation.discount_value : 0)
-      setNotes(quotation.notes || "")
+      setQuotation(data)
     } catch (error) {
       console.error("Error loading quotation:", error)
       toast.error("Failed to load quotation")
@@ -111,108 +99,180 @@ export default function EditQuotationPage() {
     }
   }
 
-  const handleAddItem = () => {
-    const newId = String(Math.max(...items.map(i => parseInt(i.id) || 0), 0) + 1)
-    setItems([...items, { id: newId, description: "", quantity: 1, unit_price: 0, amount: 0 }])
-  }
+  // PDF generation
+  const generatePDF = () => {
+    if (!quotation) return
 
-  const handleRemoveItem = (id: string) => {
-    if (items.length > 1) {
-      setItems(items.filter(item => item.id !== id))
-    } else {
-      toast.error("You must have at least one item")
-    }
-  }
-
-  const handleItemChange = (id: string, field: keyof QuotationItem, value: any) => {
-    const updatedItems = items.map(item => {
-      if (item.id === id) {
-        const updated = { ...item, [field]: value }
-        if (field === "quantity" || field === "unit_price") {
-          updated.amount = (updated.quantity || 0) * (updated.unit_price || 0)
-        }
-        return updated
-      }
-      return item
-    })
-    setItems(updatedItems)
-  }
-
-  const handleSave = async () => {
-    if (!user?.id || !id || !currentOrgId) return
-
-    // Validation
-    if (!customerName.trim()) {
-      toast.error("Please enter customer name")
-      return
-    }
-
-    if (items.some(item => !item.description.trim() || item.quantity <= 0 || item.unit_price <= 0)) {
-      toast.error("Please fill in all item details")
-      return
-    }
-
-    setSaving(true)
     try {
-      const calculatedSubtotal = (items ?? []).reduce((sum, item) => {
-        return sum + (Number(item.quantity ?? 0) * Number(item.unit_price ?? 0))
-      }, 0)
-      const calculatedDiscountAmount = Math.min(
-        calculatedSubtotal,
-        Math.max(0, discountType === "percentage" ? calculatedSubtotal * (Number(discountValue) || 0) / 100 : Number(discountValue) || 0)
-      )
-      const discountedSubtotal = calculatedSubtotal - calculatedDiscountAmount
-      const sgst = includeGst ? Math.round(discountedSubtotal * 0.09) : 0
-      const cgst = includeGst ? Math.round(discountedSubtotal * 0.09) : 0
-      const grandTotal = discountedSubtotal + sgst + cgst
+      const doc = new jsPDF({ orientation: "p", unit: "mm", format: "a4" })
+      const pageW = 210
+      const margin = 15
 
-      // Update with org_id filter for safety
-      const { error } = await supabase
-        .from("quotations")
-        .update({
-          client_name: customerName,
-          client_address: customerAddress,
-          client_district: customerDistrict,
-          client_state: customerState,
-          client_pin_code: customerPinCode,
-          order_no: orderNo || null,
-          subject: subject,
-          body_text: bodyText,
-          items: items,
-          subtotal: calculatedSubtotal,
-          discount_type: discountType,
-          discount_value: Number(discountValue) || 0,
-          discount_amount: calculatedDiscountAmount,
-          sgst: sgst,
-          cgst: cgst,
-          grand_total: grandTotal,
-          include_gst: includeGst,
-          gst_rate: includeGst ? 18 : 0,
-          notes: notes,
+      // Helper to convert hex to RGB
+      const hexToRgb = (hex: string): [number, number, number] => {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+        return result
+          ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)]
+          : [22, 45, 60]
+      }
+      const [r, g, b] = hexToRgb("#162d3c")
+
+      // Header
+      doc.setFillColor(r, g, b)
+      doc.rect(0, 0, pageW, 14, "F")
+      doc.setTextColor(255, 255, 255)
+      doc.setFontSize(14)
+      doc.setFont("helvetica", "bold")
+      doc.text("Quotation", margin, 9)
+
+      doc.setTextColor(200, 200, 200)
+      doc.setFontSize(8)
+      doc.text(`#${quotation.quote_no}`, pageW - margin, 9, { align: "right" })
+
+      // Customer info
+      doc.setTextColor(40, 40, 40)
+      doc.setFontSize(10)
+      doc.setFont("helvetica", "bold")
+      doc.text("Service Details", margin, 25)
+
+      doc.setFontSize(9)
+      doc.setFont("helvetica", "normal")
+      const customerLines = [
+        `Customer: ${quotation.client_name}`,
+        quotation.client_address || "",
+        [quotation.client_district, quotation.client_state, quotation.client_pin_code]
+          .filter(Boolean)
+          .join(", "),
+        quotation.order_no ? `Order No: ${quotation.order_no}` : "",
+      ].filter(Boolean)
+      doc.text(customerLines, margin, 32)
+
+      // Subject & body
+      let yPos = 32 + customerLines.length * 5 + 5
+      if (quotation.subject) {
+        doc.setFont("helvetica", "bold")
+        doc.text(`Subject: ${quotation.subject}`, margin, yPos)
+        yPos += 5
+      }
+      if (quotation.body_text) {
+        doc.setFont("helvetica", "normal")
+        const bodyLines = doc.splitTextToSize(quotation.body_text, pageW - 2 * margin)
+        doc.text(bodyLines, margin, yPos)
+        yPos += bodyLines.length * 5 + 5
+      }
+
+      // Items table
+      const tableHeaders = ["#", "Description", "Qty", "Unit Price (₹)", "Amount (₹)"]
+      const tableRows = quotation.items.map((item, idx) => [
+        String(idx + 1),
+        item.description,
+        String(item.quantity),
+        `₹${Number(item.unit_price).toLocaleString("en-IN")}`,
+        `₹${Number(item.amount).toLocaleString("en-IN")}`,
+      ])
+
+      autoTable(doc, {
+        startY: yPos,
+        head: [tableHeaders],
+        body: tableRows,
+        theme: "striped",
+        headStyles: {
+          fillColor: [r, g, b],
+          textColor: [255, 255, 255],
+          fontStyle: "bold",
+          fontSize: 8,
+        },
+        bodyStyles: { fontSize: 7 },
+        columnStyles: {
+          0: { cellWidth: 8 },
+          1: { cellWidth: "auto" },
+          2: { cellWidth: 15 },
+          3: { cellWidth: 25 },
+          4: { cellWidth: 25 },
+        },
+        margin: { left: margin, right: margin },
+      })
+
+      const finalY = (doc as any).lastAutoTable.finalY + 5
+
+      // Totals (with discount)
+      const subtotal = quotation.subtotal
+      const discountAmount = quotation.discount_amount || 0
+      const discountedSubtotal = subtotal - discountAmount
+      const cgst = quotation.cgst || 0
+      const sgst = quotation.sgst || 0
+      const grandTotal = quotation.grand_total
+
+      const totalX = pageW - margin - 60
+      doc.setFont("helvetica", "bold")
+      doc.setFontSize(9)
+      doc.text("Subtotal:", totalX, finalY + 5)
+      doc.text(`₹${subtotal.toLocaleString("en-IN")}`, pageW - margin, finalY + 5, { align: "right" })
+
+      if (discountAmount > 0) {
+        const discountLabel =
+          quotation.discount_type === "percentage"
+            ? `Discount (${quotation.discount_value}%)`
+            : `Discount (₹${quotation.discount_value})`
+        doc.text(discountLabel, totalX, finalY + 10)
+        doc.setTextColor(200, 0, 0)
+        doc.text(`- ₹${discountAmount.toLocaleString("en-IN")}`, pageW - margin, finalY + 10, {
+          align: "right",
         })
-        .eq("id", id)
-        .eq("org_id", currentOrgId)   // <-- added
+        doc.setTextColor(40, 40, 40)
+      }
 
-      if (error) throw error
-      toast.success("Quotation updated successfully")
-      router.push(`/quotations/${id}`)
+      doc.text("Subtotal after Discount:", totalX, finalY + 15)
+      doc.text(`₹${discountedSubtotal.toLocaleString("en-IN")}`, pageW - margin, finalY + 15, {
+        align: "right",
+      })
+
+      if (quotation.include_gst) {
+        doc.text("CGST (9%):", totalX, finalY + 20)
+        doc.text(`₹${cgst.toLocaleString("en-IN")}`, pageW - margin, finalY + 20, { align: "right" })
+        doc.text("SGST (9%):", totalX, finalY + 25)
+        doc.text(`₹${sgst.toLocaleString("en-IN")}`, pageW - margin, finalY + 25, { align: "right" })
+        doc.setFont("helvetica", "bold")
+        doc.text("Grand Total:", totalX, finalY + 32)
+        doc.text(`₹${grandTotal.toLocaleString("en-IN")}`, pageW - margin, finalY + 32, {
+          align: "right",
+        })
+      } else {
+        doc.setFont("helvetica", "bold")
+        doc.text("Total:", totalX, finalY + 22)
+        doc.text(`₹${grandTotal.toLocaleString("en-IN")}`, pageW - margin, finalY + 22, {
+          align: "right",
+        })
+      }
+
+      // Notes
+      if (quotation.notes) {
+        const notesY = Math.max(finalY + 40, (doc as any).internal.pageSize.height - 30)
+        doc.setFontSize(8)
+        doc.setFont("helvetica", "bold")
+        doc.text("Terms & Conditions:", margin, notesY)
+        doc.setFont("helvetica", "normal")
+        const notesLines = doc.splitTextToSize(quotation.notes, pageW - 2 * margin)
+        doc.text(notesLines, margin, notesY + 5)
+      }
+
+      // Footer
+      const lastY = (doc as any).internal.pageSize.height - 10
+      doc.setFontSize(7)
+      doc.setTextColor(150, 150, 150)
+      doc.text("Generated by Remindi · remindi.online", pageW / 2, lastY, { align: "center" })
+
+      doc.save(`Quotation-${quotation.quote_no}.pdf`)
+      toast.success("PDF downloaded successfully")
     } catch (error) {
-      console.error("Error updating quotation:", error)
-      toast.error(error instanceof Error ? error.message : "Failed to update quotation")
-    } finally {
-      setSaving(false)
+      console.error("Error generating PDF:", error)
+      toast.error("Failed to generate PDF")
     }
   }
 
-  // --- FIX: Compute subtotal, discount, gstAmount, and total for display ---
-  const subtotal = items.reduce((sum, item) => sum + (item.quantity || 0) * (item.unit_price || 0), 0)
-  const discountAmount = Math.min(
-    subtotal,
-    Math.max(0, discountType === "percentage" ? subtotal * (Number(discountValue) || 0) / 100 : Number(discountValue) || 0)
-  )
-  const discountedSubtotal = subtotal - discountAmount
-  const gstAmount = includeGst ? discountedSubtotal * (gstRate / 100) : 0
-  const total = discountedSubtotal + gstAmount
+  const handlePrint = () => {
+    window.print()
+  }
 
   if (loading) {
     return (
@@ -224,19 +284,59 @@ export default function EditQuotationPage() {
     )
   }
 
+  if (!quotation) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-96">
+          <p className="text-muted-foreground">Quotation not found.</p>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  // Derived values
+  const subtotal = quotation.subtotal
+  const discountAmount = quotation.discount_amount || 0
+  const discountedSubtotal = subtotal - discountAmount
+  const cgst = quotation.cgst || 0
+  const sgst = quotation.sgst || 0
+  const grandTotal = quotation.grand_total
+
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-6">
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          <Link href={`/quotations/${id}`}>
-            <Button variant="outline" size="icon">
-              <ArrowLeft className="size-4" />
+        {/* Header with actions */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Link href="/quotations">
+              <Button variant="outline" size="icon">
+                <ArrowLeft className="size-4" />
+              </Button>
+            </Link>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">
+                Quotation #{quotation.quote_no}
+              </h1>
+              <p className="text-muted-foreground">
+                Created on {format(new Date(quotation.created_at), "dd MMM yyyy")}
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handlePrint}>
+              <Printer className="mr-2 size-4" />
+              Print
             </Button>
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Edit Quotation</h1>
-            <p className="text-muted-foreground">Update quotation details</p>
+            <Button variant="outline" onClick={generatePDF}>
+              <Download className="mr-2 size-4" />
+              PDF
+            </Button>
+            <Link href={`/quotations/${id}/edit`}>
+              <Button>
+                <Edit className="mr-2 size-4" />
+                Edit
+              </Button>
+            </Link>
           </div>
         </div>
 
@@ -244,119 +344,68 @@ export default function EditQuotationPage() {
         <Card>
           <CardHeader>
             <CardTitle>Customer Information</CardTitle>
-            <CardDescription>Update the customer details for this quotation</CardDescription>
+            <CardDescription>Client details</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="customer-name">Customer Name*</Label>
-              <Input
-                id="customer-name"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                placeholder="Enter customer name"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="order-no">
-                Order Number <span className="text-xs text-muted-foreground">(Optional)</span>
-              </Label>
-              <Input
-                id="order-no"
-                value={orderNo}
-                onChange={(e) => setOrderNo(e.target.value)}
-                placeholder="e.g. PO-2026-001"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="customer-address">Address</Label>
-              <Textarea
-                id="customer-address"
-                value={customerAddress}
-                onChange={(e) => setCustomerAddress(e.target.value)}
-                placeholder="Enter customer address"
-                rows={2}
-              />
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="space-y-2">
-                <Label htmlFor="customer-district">District</Label>
-                <Input
-                  id="customer-district"
-                  value={customerDistrict}
-                  onChange={(e) => setCustomerDistrict(e.target.value)}
-                  placeholder="District"
-                />
+          <CardContent className="space-y-2">
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div>
+                <span className="text-sm text-muted-foreground">Customer Name</span>
+                <p className="font-medium">{quotation.client_name}</p>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="customer-state">State</Label>
-                <Input
-                  id="customer-state"
-                  value={customerState}
-                  onChange={(e) => setCustomerState(e.target.value)}
-                  placeholder="State"
-                />
+              {quotation.order_no && (
+                <div>
+                  <span className="text-sm text-muted-foreground">Order Number</span>
+                  <p className="font-medium">{quotation.order_no}</p>
+                </div>
+              )}
+            </div>
+            {quotation.client_address && (
+              <div>
+                <span className="text-sm text-muted-foreground">Address</span>
+                <p>{quotation.client_address}</p>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="customer-pin-code">Pin Code</Label>
-                <Input
-                  id="customer-pin-code"
-                  value={customerPinCode}
-                  onChange={(e) => setCustomerPinCode(e.target.value)}
-                  placeholder="Pin Code"
-                />
-              </div>
+            )}
+            <div className="grid gap-2 sm:grid-cols-3">
+              {quotation.client_district && (
+                <div>
+                  <span className="text-sm text-muted-foreground">District</span>
+                  <p>{quotation.client_district}</p>
+                </div>
+              )}
+              {quotation.client_state && (
+                <div>
+                  <span className="text-sm text-muted-foreground">State</span>
+                  <p>{quotation.client_state}</p>
+                </div>
+              )}
+              {quotation.client_pin_code && (
+                <div>
+                  <span className="text-sm text-muted-foreground">Pin Code</span>
+                  <p>{quotation.client_pin_code}</p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Subject and Letter Body */}
+        {/* Letter Details */}
         <Card>
           <CardHeader>
             <CardTitle>Letter Details</CardTitle>
-            <CardDescription>Update subject and letter body for this quotation</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="subject">Subject</Label>
-              <Input
-                id="subject"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                placeholder="e.g. Regarding AC AMC works at above mention place"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="body-text">Letter Body</Label>
-              <Textarea
-                id="body-text"
-                value={bodyText}
-                onChange={(e) => setBodyText(e.target.value)}
-                placeholder="e.g. Respected Sir/Madam, As per discussion held with you, regarding following works..."
-                rows={4}
-              />
-              <div className="flex gap-2 flex-wrap">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setBodyText(bodyText + (bodyText ? "\n" : "") + "Respected Sir/Madam,")}
-                >
-                  "Respected Sir/Madam,"
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setBodyText(bodyText + (bodyText ? "\n" : "") + "As per discussion held with you, regarding following works at above mention place. Details are given as below;")}
-                >
-                  "As per discussion..."
-                </Button>
+          <CardContent className="space-y-2">
+            {quotation.subject && (
+              <div>
+                <span className="text-sm text-muted-foreground">Subject</span>
+                <p className="font-medium">{quotation.subject}</p>
               </div>
-            </div>
+            )}
+            {quotation.body_text && (
+              <div>
+                <span className="text-sm text-muted-foreground">Body</span>
+                <p className="whitespace-pre-wrap">{quotation.body_text}</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -364,200 +413,117 @@ export default function EditQuotationPage() {
         <Card>
           <CardHeader>
             <CardTitle>Items</CardTitle>
-            <CardDescription>Update services or products for this quotation</CardDescription>
+            <CardDescription>Services or products included</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {items.map((item, index) => (
-              <div key={item.id} className="flex flex-col sm:flex-row gap-2">
-                <div className="flex-1 space-y-2">
-                  <Label htmlFor={`desc-${item.id}`} className="text-xs">
-                    Description
-                  </Label>
-                  <Input
-                    id={`desc-${item.id}`}
-                    value={item.description}
-                    onChange={(e) => handleItemChange(item.id, "description", e.target.value)}
-                    placeholder="Service or product description"
-                  />
-                </div>
-                <div className="w-20 space-y-2">
-                  <Label htmlFor={`qty-${item.id}`} className="text-xs">
-                    Qty
-                  </Label>
-                  <Input
-                    id={`qty-${item.id}`}
-                    type="number"
-                    min="1"
-                    value={item.quantity}
-                    onFocus={(e) => e.target.value = ''}
-                    onBlur={(e) => {
-                      const val = parseFloat(e.target.value);
-                      handleItemChange(item.id, "quantity", isNaN(val) || val <= 0 ? 1 : val);
-                    }}
-                    onChange={(e) => handleItemChange(item.id, "quantity", parseFloat(e.target.value) || 0)}
-                  />
-                </div>
-                <div className="w-32 space-y-2">
-                  <Label htmlFor={`price-${item.id}`} className="text-xs">
-                    Unit Price (₹)
-                  </Label>
-                  <Input
-                    id={`price-${item.id}`}
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={item.unit_price}
-                    onFocus={(e) => e.target.value = ''}
-                    onBlur={(e) => {
-                      const val = parseFloat(e.target.value);
-                      handleItemChange(item.id, "unit_price", isNaN(val) ? 0 : val);
-                    }}
-                    onChange={(e) => handleItemChange(item.id, "unit_price", parseFloat(e.target.value) || 0)}
-                  />
-                </div>
-                <div className="w-32 space-y-2">
-                  <Label htmlFor={`amount-${item.id}`} className="text-xs">
-                    Amount (₹)
-                  </Label>
-                  <div className="h-10 flex items-center px-3 bg-secondary rounded-md text-sm font-medium">
-                    {item.amount.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
-                  </div>
-                </div>
-                <div className="flex items-end sm:items-end justify-end sm:justify-start">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleRemoveItem(item.id)}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-
-            <Button
-              variant="outline"
-              onClick={handleAddItem}
-              className="w-full"
-            >
-              <Plus className="mr-2 size-4" />
-              Add Item
-            </Button>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="py-2 text-left font-medium">#</th>
+                    <th className="py-2 text-left font-medium">Description</th>
+                    <th className="py-2 text-right font-medium">Qty</th>
+                    <th className="py-2 text-right font-medium">Unit Price (₹)</th>
+                    <th className="py-2 text-right font-medium">Amount (₹)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {quotation.items.map((item, index) => (
+                    <tr key={item.id} className="border-b last:border-0">
+                      <td className="py-2">{index + 1}</td>
+                      <td className="py-2">{item.description}</td>
+                      <td className="py-2 text-right">{item.quantity}</td>
+                      <td className="py-2 text-right">
+                        ₹{item.unit_price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-2 text-right font-medium">
+                        ₹{item.amount.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Totals */}
+        {/* Totals – with discount display */}
         <Card>
           <CardHeader>
             <CardTitle>Totals</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3 border-b border-border pb-4">
+          <CardContent className="space-y-3">
+            <div className="space-y-2 border-b border-border pb-4">
+              {/* Subtotal */}
               <div className="flex justify-between items-center text-sm">
                 <span className="text-muted-foreground">Subtotal:</span>
-                <span className="font-medium">₹{subtotal.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</span>
+                <span className="font-medium">
+                  ₹{subtotal.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+                </span>
               </div>
 
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Percent className="size-4 text-muted-foreground shrink-0" />
-                  <Label className="text-sm text-muted-foreground shrink-0">Discount</Label>
-                  <Select value={discountType} onValueChange={(val) => setDiscountType(val as "percentage" | "fixed")}>
-                    <SelectTrigger className="h-9 w-[104px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="percentage">%</SelectItem>
-                      <SelectItem value="fixed">₹ Amount</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={discountValue}
-                    onFocus={(e) => e.target.value = ''}
-                    onBlur={(e) => {
-                      const val = parseFloat(e.target.value)
-                      setDiscountValue(isNaN(val) || val < 0 ? 0 : val)
-                    }}
-                    onChange={(e) => setDiscountValue(parseFloat(e.target.value) || 0)}
-                    placeholder={discountType === "percentage" ? "0" : "0.00"}
-                    className="h-9 w-28"
-                  />
+              {/* Discount (only if > 0) */}
+              {discountAmount > 0 && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">
+                    Discount ({quotation.discount_type === "percentage"
+                      ? `${quotation.discount_value}%`
+                      : `₹${quotation.discount_value}`}):
+                  </span>
+                  <span className="font-medium text-red-600">
+                    - ₹{discountAmount.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+                  </span>
                 </div>
-                {discountAmount > 0 && (
-                  <div className="flex justify-between items-center text-sm pl-6">
-                    <span className="text-muted-foreground">Discount Amount:</span>
-                    <span className="font-medium text-red-600">
-                      − ₹{discountAmount.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+              )}
+
+              {/* Subtotal after Discount */}
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">Subtotal after Discount:</span>
+                <span className="font-medium">
+                  ₹{discountedSubtotal.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+                </span>
+              </div>
+
+              {/* GST section */}
+              {quotation.include_gst && (
+                <>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">CGST (9%):</span>
+                    <span className="font-medium">
+                      ₹{cgst.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
                     </span>
                   </div>
-                )}
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Checkbox
-                  id="include-gst"
-                  checked={includeGst}
-                  onCheckedChange={(checked) => setIncludeGst(checked as boolean)}
-                />
-                <Label htmlFor="include-gst" className="text-sm cursor-pointer">
-                  Include GST ({gstRate}%)
-                </Label>
-              </div>
-
-              {includeGst && (
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">GST Amount:</span>
-                  <span className="font-medium">₹{gstAmount.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</span>
-                </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">SGST (9%):</span>
+                    <span className="font-medium">
+                      ₹{sgst.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+                    </span>
+                  </div>
+                </>
               )}
             </div>
 
+            {/* Grand Total */}
             <div className="flex justify-between items-center text-lg font-bold">
-              <span>Total:</span>
-              <span className="text-primary">₹{total.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</span>
+              <span>Grand Total:</span>
+              <span className="text-primary">
+                ₹{grandTotal.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+              </span>
             </div>
           </CardContent>
         </Card>
 
         {/* Notes */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Terms & Conditions</CardTitle>
-            <CardDescription>Update additional terms or conditions</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Enter any additional notes or terms..."
-              rows={4}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Actions */}
-        <div className="flex gap-3 justify-end">
-          <Link href={`/quotations/${id}`}>
-            <Button variant="outline">Cancel</Button>
-          </Link>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? (
-              <>
-                <Loader2 className="mr-2 size-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="mr-2 size-4" />
-                Save Changes
-              </>
-            )}
-          </Button>
-        </div>
+        {quotation.notes && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Terms & Conditions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="whitespace-pre-wrap">{quotation.notes}</p>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </DashboardLayout>
   )
