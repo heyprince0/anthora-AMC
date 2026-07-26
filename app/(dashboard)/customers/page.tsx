@@ -43,7 +43,7 @@ export default function CustomersPage() {
   const [currentOrgId, setCurrentOrgId] = useState<string | null>(null)
 
   // Plan limits
-  const { maxCustomers, currentCustomerCount, status, isLoading: limitsLoading } = usePlanLimits(currentOrgId)
+  const { maxCustomers, currentCustomerCount, status, planName, isLoading: limitsLoading } = usePlanLimits(currentOrgId)
 
   // Limit modal state
   const [showLimitModal, setShowLimitModal] = useState(false)
@@ -174,7 +174,10 @@ export default function CustomersPage() {
   const checkAndShowLimitModal = () => {
     if (status === 'expired' || status === 'cancelled') {
       setLimitModalType('expired')
-      setLimitModalCustom({})
+      setLimitModalCustom({
+        title: `Your ${planName || 'current'} plan has expired`,
+        description: `Renew your ${planName || 'current'} plan to continue adding customers.`,
+      })
       setShowLimitModal(true)
       return true
     }
@@ -191,6 +194,10 @@ export default function CustomersPage() {
   }
 
   const handleAddClick = () => {
+    if (limitsLoading) {
+      toast.error("Checking your plan status, please try again in a moment...")
+      return
+    }
     if (checkAndShowLimitModal()) return
     setEditingCustomer(null)
     setModalOpen(true)
@@ -218,7 +225,7 @@ export default function CustomersPage() {
             <h1 className="text-2xl font-bold text-foreground">Customers</h1>
             <p className="text-muted-foreground">Manage your customers and their contact information</p>
           </div>
-          <Button onClick={handleAddClick}>
+          <Button onClick={handleAddClick} disabled={limitsLoading}>
             <Plus className="mr-2 size-4" />
             Add Customer
           </Button>
