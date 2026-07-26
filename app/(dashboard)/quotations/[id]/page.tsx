@@ -10,12 +10,11 @@ import { useAuth } from "@/lib/auth-context"
 import {
   ArrowLeft,
   Download,
-  MessageCircle,
   Edit,
   Loader2,
   FileText,
   CheckCircle2,
-} from "lucide-react"
+} from "lucide-react"  // removed MessageCircle
 import { toast } from "sonner"
 import Link from "next/link"
 import jsPDF from "jspdf"
@@ -267,7 +266,7 @@ export default function ViewQuotationPage() {
   }
 
   // ============================================================
-  // NEW getTotals – combines GST into one line
+  // getTotals – combines GST into one line
   // ============================================================
   const getTotals = () => {
     if (!quotation) return { subtotal: 0, discountAmount: 0, discountType: null, discountValue: 0, discountedSubtotal: 0, gstAmount: 0, gstRate: 18, grandTotal: 0 }
@@ -281,41 +280,7 @@ export default function ViewQuotationPage() {
   }
 
   // ============================================================
-  // WhatsApp message – combined GST
-  // ============================================================
-  const handleWhatsApp = () => {
-    if (!quotation) return
-    const { subtotal, discountAmount, discountedSubtotal, gstAmount, gstRate, grandTotal } = getTotals()
-    const items = quotation.items ?? []
-    let msg =
-      `*Quotation - ${safeStr(profile?.company_name)}*\n` +
-      `Quote No: ${safeStr(quotation.quote_no)}\n` +
-      `Date: ${safeDate(quotation.created_at)}\n` +
-      `Valid till: ${safeDate(quotation.valid_till)}\n\n` +
-      `*Customer:* ${safeStr(quotation.client_name)}\n\n` +
-      `─────────────────────\n` +
-      `*Services:*\n` +
-      items.map((i: any) =>
-        `• ${i.particulars ?? i.description ?? i.name ?? "-"} - Rs.${Number(i.amount ?? 0).toLocaleString("en-IN")}`
-      ).join("\n") + "\n" +
-      `─────────────────────\n` +
-      `*Subtotal:* Rs.${subtotal.toLocaleString("en-IN")}\n`
-    if (discountAmount > 0) {
-      msg += `*Discount:* -Rs.${discountAmount.toLocaleString("en-IN")}\n`
-      msg += `*Subtotal after Discount:* Rs.${discountedSubtotal.toLocaleString("en-IN")}\n`
-    }
-    if (quotation.include_gst) {
-      msg += `*GST (${gstRate}%):* Rs.${gstAmount.toLocaleString("en-IN")}\n`
-    }
-    msg += `*Total:* Rs.${grandTotal.toLocaleString("en-IN")}\n` +
-      `─────────────────────\n\n` +
-      `To confirm reply YES or call ${safeStr(profile?.company_phone)}\n\n` +
-      `_Powered by Remindi_`
-    window.open("https://wa.me/?text=" + encodeURIComponent(msg))
-  }
-
-  // ============================================================
-  // PDF GENERATION – with discount and combined GST
+  // PDF GENERATION – keep discount line, remove "Subtotal after Discount"
   // ============================================================
   const handleDownloadPdf = async (stampToggle: boolean = false) => {
     if (!quotation) return
@@ -396,7 +361,7 @@ export default function ViewQuotationPage() {
       }
 
       const items = quotation.items ?? []
-      const { subtotal, discountAmount, discountedSubtotal, gstAmount, gstRate, grandTotal } = getTotals()
+      const { subtotal, discountAmount, discountType, discountValue, gstAmount, gstRate, grandTotal } = getTotals()
 
       // ===== SINGLE RENDER FUNCTION =====
       const renderQuotation = (doc: jsPDF): number => {
@@ -561,7 +526,7 @@ export default function ViewQuotationPage() {
 
         y = (doc as any).lastAutoTable.finalY + 8
 
-        // ===== TOTALS – with discount and combined GST =====
+        // ===== TOTALS – discount line kept, subtotal after discount removed =====
         doc.setFont('helvetica', 'normal')
         doc.setFontSize(9)
         doc.setTextColor(0, 0, 0)
@@ -571,19 +536,17 @@ export default function ViewQuotationPage() {
         doc.text('Rs. ' + subtotal.toLocaleString('en-IN'), 195, y, { align: 'right' })
         y += 4
 
-        // Discount (if any) – label only, no parentheses
+        // Discount (if any)
         if (discountAmount > 0) {
-          doc.text('Discount:', 160, y, { align: 'right' })
+          const discountLabel = discountType === "percentage" ? `${discountValue}%` : `₹${discountValue}`
+          doc.text(`Discount (${discountLabel}):`, 160, y, { align: 'right' })
           doc.setTextColor(200, 0, 0)
           doc.text('- Rs. ' + discountAmount.toLocaleString('en-IN'), 195, y, { align: 'right' })
           doc.setTextColor(0, 0, 0)
           y += 4
         }
 
-        // Subtotal after Discount
-        doc.text('Subtotal after Discount:', 160, y, { align: 'right' })
-        doc.text('Rs. ' + discountedSubtotal.toLocaleString('en-IN'), 195, y, { align: 'right' })
-        y += 4
+        // (No "Subtotal after Discount" line)
 
         // GST (combined)
         if (quotation.include_gst) {
@@ -631,7 +594,7 @@ export default function ViewQuotationPage() {
           if (quotation.payment_terms) { doc.text(`Payment Terms: ${safeStr(quotation.payment_terms)}`, margin, y); y += 4 }
         }
 
-        // TAX INFORMATION (only if GST is included)
+        // TAX INFORMATION
         if (quotation.include_gst) {
           y += 6
           doc.setFontSize(9)
@@ -750,7 +713,7 @@ export default function ViewQuotationPage() {
   }
 
   // ===== UI TOTALS =====
-  const { subtotal, discountAmount, discountType, discountValue, discountedSubtotal, gstAmount, gstRate, grandTotal } = getTotals()
+  const { subtotal, discountAmount, discountType, discountValue, gstAmount, gstRate, grandTotal } = getTotals()
   const includeGst = quotation.include_gst ?? true
   const mappedItems = getMappedItems()
 
@@ -810,14 +773,7 @@ export default function ViewQuotationPage() {
               )}
               Download PDF
             </Button>
-            <Button
-              onClick={handleWhatsApp}
-              className="bg-green-600 hover:bg-green-700 text-white"
-              size="sm"
-            >
-              <MessageCircle className="mr-1.5 size-4" />
-              WhatsApp
-            </Button>
+            {/* WhatsApp button removed */}
             {quotation.invoice_id ? (
               <Button
                 className="bg-green-600 hover:bg-green-700 text-white"
@@ -956,7 +912,7 @@ export default function ViewQuotationPage() {
           </CardContent>
         </Card>
 
-        {/* ===== TOTALS – with combined GST ===== */}
+        {/* ===== TOTALS – discount line kept, subtotal after discount removed ===== */}
         <Card>
           <CardContent className="pt-6">
             <div className="flex flex-col items-end gap-3 max-w-xs ml-auto">
@@ -966,19 +922,17 @@ export default function ViewQuotationPage() {
                 <span className="font-medium">₹{subtotal.toLocaleString("en-IN")}</span>
               </div>
 
-              {/* Discount (if any) – no parentheses */}
+              {/* Discount (if any) */}
               {discountAmount > 0 && (
                 <div className="flex justify-between w-full text-sm">
-                  <span className="text-muted-foreground">Discount:</span>
+                  <span className="text-muted-foreground">
+                    Discount {discountType === "percentage" ? `(${discountValue}%)` : ""}:
+                  </span>
                   <span className="font-medium text-red-600">- ₹{discountAmount.toLocaleString("en-IN")}</span>
                 </div>
               )}
 
-              {/* Subtotal after Discount */}
-              <div className="flex justify-between w-full text-sm border-t border-border/50 pt-1">
-                <span className="text-muted-foreground">Subtotal after Discount:</span>
-                <span className="font-medium">₹{discountedSubtotal.toLocaleString("en-IN")}</span>
-              </div>
+              {/* No "Subtotal after Discount" line */}
 
               {/* GST (combined) */}
               {includeGst && (
