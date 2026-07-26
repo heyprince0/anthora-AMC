@@ -33,9 +33,10 @@ import {
 } from "@/components/ui/alert-dialog"
 import { supabase, type Contract, type Customer, getDaysUntilService } from "@/lib/supabase"
 import { useAuth } from "@/lib/auth-context"
-import { Plus, Search, Edit, Trash2, Download } from "lucide-react"
+import { Plus, Search, Edit, Trash2, Download, Eye } from "lucide-react"
 import { toast } from "sonner"
 import { AddContractModal } from "@/components/add-contract-modal"
+import Link from "next/link"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 import LimitReachedModal, { LimitModalType } from "@/components/billing/limit-reached-modal"
@@ -654,6 +655,16 @@ export default function ContractsPage() {
                           {!isTechnician && (
                             <TableCell>
                               <div className="flex gap-2">
+                                <Link href={`/contracts/${contract.id}`}>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    title="View Contract Details"
+                                  >
+                                    <Eye className="size-4" />
+                                    <span className="sr-only">View</span>
+                                  </Button>
+                                </Link>
                                 <Button
                                   variant="ghost"
                                   size="sm"
