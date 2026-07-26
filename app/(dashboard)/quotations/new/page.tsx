@@ -9,9 +9,16 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { supabase, type Quotation, type QuotationItem } from "@/lib/supabase"
 import { useAuth } from "@/lib/auth-context"
-import { Plus, Trash2, Save, ArrowLeft, Loader2 } from "lucide-react"
+import { Plus, Trash2, Save, ArrowLeft, Loader2, Percent } from "lucide-react"
 import { toast } from "sonner"
 import Link from "next/link"
 
@@ -34,6 +41,8 @@ export default function NewQuotationPage() {
   ])
   const [includeGst, setIncludeGst] = useState(true)
   const [gstRate, setGstRate] = useState(18)
+  const [discountType, setDiscountType] = useState<"percentage" | "fixed">("percentage")
+  const [discountValue, setDiscountValue] = useState(0)
   const [notes, setNotes] = useState("")
 
   // --- ADDED: organization ID ---
@@ -59,9 +68,14 @@ export default function NewQuotationPage() {
   }, [user?.id])
 
   const subtotal = items.reduce((sum, item) => sum + item.amount, 0)
+  const discountAmount = Math.min(
+    subtotal,
+    Math.max(0, discountType === "percentage" ? subtotal * (Number(discountValue) || 0) / 100 : Number(discountValue) || 0)
+  )
+  const discountedSubtotal = subtotal - discountAmount
   const gstRate_ = Number(gstRate ?? 18) / 100
-  const gstAmount = includeGst ? Math.round(subtotal * gstRate_) : 0
-  const total = subtotal + gstAmount
+  const gstAmount = includeGst ? Math.round(discountedSubtotal * gstRate_) : 0
+  const total = discountedSubtotal + gstAmount
 
   const handleAddItem = () => {
     const newId = String(Math.max(...items.map(i => parseInt(i.id) || 0), 0) + 1)
@@ -120,9 +134,14 @@ export default function NewQuotationPage() {
       const calculatedSubtotal = (items ?? []).reduce((sum, item) => {
         return sum + (Number(item.quantity ?? 0) * Number(item.unit_price ?? 0))
       }, 0)
-      const sgst = includeGst ? Math.round(calculatedSubtotal * 0.09) : 0
-      const cgst = includeGst ? Math.round(calculatedSubtotal * 0.09) : 0
-      const grandTotal = calculatedSubtotal + sgst + cgst
+      const calculatedDiscountAmount = Math.min(
+        calculatedSubtotal,
+        Math.max(0, discountType === "percentage" ? calculatedSubtotal * (Number(discountValue) || 0) / 100 : Number(discountValue) || 0)
+      )
+      const discountedSubtotal = calculatedSubtotal - calculatedDiscountAmount
+      const sgst = includeGst ? Math.round(discountedSubtotal * 0.09) : 0
+      const cgst = includeGst ? Math.round(discountedSubtotal * 0.09) : 0
+      const grandTotal = discountedSubtotal + sgst + cgst
 
       const { data, error } = await supabase
         .from("quotations")
@@ -142,6 +161,9 @@ export default function NewQuotationPage() {
           body_text: bodyText,
           items: items,
           subtotal: calculatedSubtotal,
+          discount_type: discountType,
+          discount_value: Number(discountValue) || 0,
+          discount_amount: calculatedDiscountAmount,
           sgst: sgst,
           cgst: cgst,
           grand_total: grandTotal,
@@ -401,6 +423,44 @@ export default function NewQuotationPage() {
               <div className="flex justify-between items-center text-sm">
                 <span className="text-muted-foreground">Subtotal:</span>
                 <span className="font-medium">₹{subtotal.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</span>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Percent className="size-4 text-muted-foreground shrink-0" />
+                  <Label className="text-sm text-muted-foreground shrink-0">Discount</Label>
+                  <Select value={discountType} onValueChange={(val) => setDiscountType(val as "percentage" | "fixed")}>
+                    <SelectTrigger className="h-9 w-[104px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="percentage">%</SelectItem>
+                      <SelectItem value="fixed">₹ Amount</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={discountValue}
+                    onFocus={(e) => e.target.value = ''}
+                    onBlur={(e) => {
+                      const val = parseFloat(e.target.value)
+                      setDiscountValue(isNaN(val) || val < 0 ? 0 : val)
+                    }}
+                    onChange={(e) => setDiscountValue(parseFloat(e.target.value) || 0)}
+                    placeholder={discountType === "percentage" ? "0" : "0.00"}
+                    className="h-9 w-28"
+                  />
+                </div>
+                {discountAmount > 0 && (
+                  <div className="flex justify-between items-center text-sm pl-6">
+                    <span className="text-muted-foreground">Discount Amount:</span>
+                    <span className="font-medium text-red-600">
+                      − ₹{discountAmount.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-3">
