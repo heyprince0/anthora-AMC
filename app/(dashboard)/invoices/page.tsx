@@ -188,6 +188,14 @@ export default function InvoicesPage() {
   const handleNewInvoiceClick = async () => {
     if (!user?.id || !currentOrgId) return
 
+    // ✅ Don't let the click through until we actually know the plan status.
+    // Without this, a fast click right after page load could sneak past the
+    // expired/limit check because `status` hasn't been fetched yet.
+    if (limitsLoading) {
+      toast.error("Checking your plan status, please try again in a moment...")
+      return
+    }
+
     // ✅ Check limits before anything else
     if (checkAndShowLimitModal()) return
 
@@ -249,7 +257,7 @@ export default function InvoicesPage() {
           </div>
           <Button
             onClick={handleNewInvoiceClick}
-            disabled={checkingProfile}
+            disabled={checkingProfile || limitsLoading}
             className="bg-blue-600 hover:bg-blue-700 text-white"
           >
             <Plus className="mr-2 size-4" />
