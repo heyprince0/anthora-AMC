@@ -102,14 +102,12 @@ export default function ViewInvoicePage() {
   const [editPaymentTerms, setEditPaymentTerms] = useState("")
   const [includeStamp, setIncludeStamp] = useState<boolean>(false)
   const [editNotes, setEditNotes] = useState("")
-  const [editClientGstin, setEditClientGstin] = useState("") // NEW
+  const [editClientGstin, setEditClientGstin] = useState("")
   const [quotationData, setQuotationData] = useState<{ quote_no: string } | null>(null)
   const id = params.id as string
 
-  // --- NEW: organization state ---
   const [currentOrgId, setCurrentOrgId] = useState<string | null>(null)
 
-  // --- fetch org_id ---
   useEffect(() => {
     if (user?.id) {
       supabase
@@ -127,20 +125,17 @@ export default function ViewInvoicePage() {
     }
   }, [user?.id])
 
-  // Load stamp toggle from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem(`stamp_toggle_inv_${id}`)
     if (saved === 'true') setIncludeStamp(true)
   }, [id])
 
-  // Save stamp toggle to localStorage whenever it changes
   const handleStampToggle = () => {
     const newVal = !includeStamp
     setIncludeStamp(newVal)
     localStorage.setItem(`stamp_toggle_inv_${id}`, String(newVal))
   }
 
-  // Load data only when org_id and id are available
   useEffect(() => {
     if (user?.id && id && currentOrgId) {
       loadData()
@@ -150,7 +145,6 @@ export default function ViewInvoicePage() {
   const loadData = async () => {
     setLoading(true)
     try {
-      // Fetch invoice by org_id
       const { data: iData, error: iErr } = await supabase
         .from("invoices")
         .select("*")
@@ -160,7 +154,6 @@ export default function ViewInvoicePage() {
 
       if (iErr) throw iErr
 
-      // Fetch company profile by org_id
       const { data: pData } = await supabase
         .from("company_profile")
         .select("*")
@@ -171,7 +164,6 @@ export default function ViewInvoicePage() {
       setInvoice(invoiceData)
       if (pData) setProfile(pData as CompanyProfile)
 
-      // Fetch quotation data if quotation_id exists
       if (invoiceData.quotation_id) {
         const { data: quotData } = await supabase
           .from("quotations")
@@ -217,7 +209,7 @@ export default function ViewInvoicePage() {
     setEditDueDate(invoice.due_date || "")
     setEditPaymentTerms(invoice.payment_terms || "")
     setEditNotes(invoice.notes || "")
-    setEditClientGstin(invoice.client_gstin || "") // NEW
+    setEditClientGstin(invoice.client_gstin || "")
     setShowEditModal(true)
   }
 
@@ -235,7 +227,7 @@ export default function ViewInvoicePage() {
           due_date: editDueDate,
           payment_terms: editPaymentTerms,
           notes: editNotes,
-          client_gstin: editClientGstin || null, // NEW
+          client_gstin: editClientGstin || null,
           updated_at: new Date().toISOString(),
         })
         .eq("id", invoice.id)
@@ -263,23 +255,23 @@ export default function ViewInvoicePage() {
     }))
   }
 
-  const calculateTotals = () => {
-    if (!invoice) return { subtotal: 0, sgst: 0, cgst: 0, grandTotal: 0 }
-    return {
-      subtotal: invoice.subtotal,
-      sgst: invoice.sgst,
-      cgst: invoice.cgst,
-      grandTotal: invoice.grand_total,
-    }
+  // --- updated totals to include discount ---
+  const getTotals = () => {
+    if (!invoice) return { subtotal: 0, discountAmount: 0, discountType: null, discountValue: 0, sgst: 0, cgst: 0, grandTotal: 0 }
+    const subtotal = invoice.subtotal || 0
+    const discountAmount = invoice.discount_amount || 0
+    const sgst = invoice.sgst || 0
+    const cgst = invoice.cgst || 0
+    const grandTotal = invoice.grand_total || 0
+    return { subtotal, discountAmount, discountType: invoice.discount_type, discountValue: invoice.discount_value || 0, sgst, cgst, grandTotal }
   }
 
   const handleWhatsApp = () => {
     if (!invoice) return
-    const { subtotal, sgst, cgst, grandTotal } = calculateTotals()
+    const { subtotal, discountAmount, sgst, cgst, grandTotal } = getTotals()
     const items = invoice.items ?? []
     const includeGst = invoice.include_gst ?? true
-    const gstTotal = sgst + cgst
-    const msg =
+    let msg =
       `*Invoice - ${safeStr(profile?.company_name)}\n` +
       `Invoice No: ${safeStr(invoice.invoice_no)}\n` +
       `Date: ${safeDate(invoice.invoice_date)}\n` +
@@ -291,9 +283,15 @@ export default function ViewInvoicePage() {
         `• ${i.particulars ?? i.description ?? i.name ?? "-"} - Rs.${Number(i.amount ?? 0).toLocaleString("en-IN")}`
       ).join("\n") + "\n" +
       `─────────────────────\n` +
-      `*Subtotal:* Rs.${subtotal.toLocaleString("en-IN")}\n` +
-      (includeGst ? `*SGST (9%):* Rs.${sgst.toLocaleString("en-IN")}\n*CGST (9%):* Rs.${cgst.toLocaleString("en-IN")}\n` : ``) +
-      `*Total:* Rs.${grandTotal.toLocaleString("en-IN")}\n` +
+      `*Subtotal:* Rs.${subtotal.toLocaleString("en-IN")}\n`
+    if (discountAmount > 0) {
+      const discountLabel = invoice.discount_type === "percentage" ? `${invoice.discount_value}%` : `₹${invoice.discount_value}`
+      msg += `*Discount (${discountLabel}):* -Rs.${discountAmount.toLocaleString("en-IN")}\n`
+    }
+    if (includeGst) {
+      msg += `*SGST (9%):* Rs.${sgst.toLocaleString("en-IN")}\n*CGST (9%):* Rs.${cgst.toLocaleString("en-IN")}\n`
+    }
+    msg += `*Total:* Rs.${grandTotal.toLocaleString("en-IN")}\n` +
       `─────────────────────\n\n` +
       `To confirm please reply or call ${safeStr(profile?.company_phone)}\n\n` +
       `_Powered by Remindi_`
@@ -301,7 +299,7 @@ export default function ViewInvoicePage() {
   }
 
   // =============================================
-  // FULL PDF GENERATION – copied verbatim from original
+  // PDF GENERATION – updated to include discount
   // =============================================
   const handleDownloadPdf = async (stampToggle: boolean = false) => {
     if (!invoice) return
@@ -373,7 +371,7 @@ export default function ViewInvoicePage() {
       }
 
       const items = invoice.items ?? []
-      const { subtotal, sgst, cgst, grandTotal } = calculateTotals()
+      const { subtotal, discountAmount, discountType, discountValue, sgst, cgst, grandTotal } = getTotals()
 
       // ===== SINGLE RENDER FUNCTION =====
       const renderInvoice = (doc: jsPDF, pageH: number): number => {
@@ -383,9 +381,8 @@ export default function ViewInvoicePage() {
         if (headerStyle === "thumbnail" && bannerBase64) {
           const bannerW = pageW - (margin * 2)
           doc.addImage(bannerBase64, "PNG", margin, y, bannerW, bannerH)
-          y += bannerH +6 //add the gap
+          y += bannerH +6
         } else if (headerStyle === "single_logo") {
-          // Use new single logo header layout
           y = renderSingleLogoHeader(doc, profile, y, logoBase64, pageW, margin, [tr, tg, tb])
         } else {
           // Default legacy header
@@ -487,7 +484,6 @@ export default function ViewInvoicePage() {
           y += 5
         }
 
-        // NEW: Print client GSTIN if present
         if (invoice.client_gstin) {
           doc.text(`GSTIN: ${invoice.client_gstin}`, margin, y)
           y += 5
@@ -534,44 +530,52 @@ export default function ViewInvoicePage() {
 
         y = (doc as any).lastAutoTable.finalY + 8
 
-        if (invoice.include_gst) {
-          doc.setFont('helvetica', 'normal')
-          doc.setFontSize(9)
+        // ===== TOTALS with discount =====
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(9)
+        doc.setTextColor(0, 0, 0)
+
+        doc.text('Subtotal:', 160, y, { align: 'right' })
+        doc.text('Rs. ' + subtotal.toLocaleString('en-IN'), 195, y, { align: 'right' })
+        y += 4
+
+        // Discount line if any
+        if (discountAmount > 0) {
+          const discountLabel = discountType === "percentage" ? `${discountValue}%` : `₹${discountValue}`
+          doc.text(`Discount (${discountLabel}):`, 160, y, { align: 'right' })
+          doc.setTextColor(200, 0, 0)
+          doc.text('- Rs. ' + discountAmount.toLocaleString('en-IN'), 195, y, { align: 'right' })
           doc.setTextColor(0, 0, 0)
-
-          doc.text('Subtotal:', 160, y, { align: 'right' })
-          doc.text('Rs. ' + subtotal.toLocaleString('en-IN'), 195, y, { align: 'right' })
-
           y += 4
+        }
+
+        if (invoice.include_gst) {
           doc.text('SGST (9%):', 160, y, { align: 'right' })
           doc.text('Rs. ' + sgst.toLocaleString('en-IN'), 195, y, { align: 'right' })
-
           y += 4
           doc.text('CGST (9%):', 160, y, { align: 'right' })
           doc.text('Rs. ' + cgst.toLocaleString('en-IN'), 195, y, { align: 'right' })
-
           y += 3
           doc.setDrawColor(0, 0, 0)
           doc.setLineWidth(0.3)
           doc.line(140, y, 195, y)
-
           y += 4
           doc.setFont('helvetica', 'bold')
           doc.setFontSize(10)
           doc.text('Total:', 160, y, { align: 'right' })
           doc.text('Rs. ' + grandTotal.toLocaleString('en-IN'), 195, y, { align: 'right' })
         } else {
-          doc.setFont('helvetica', 'normal')
-          doc.setFontSize(9)
+          doc.setFont('helvetica', 'bold')
+          doc.setFontSize(10)
           doc.text('Total:', 160, y, { align: 'right' })
-          doc.text('Rs. ' + subtotal.toLocaleString('en-IN'), 195, y, { align: 'right' })
+          doc.text('Rs. ' + grandTotal.toLocaleString('en-IN'), 195, y, { align: 'right' })
         }
 
         y += 2
         doc.setFont('helvetica', 'bold')
         doc.setFontSize(9)
         doc.setTextColor(0, 0, 0)
-        const inWordsAmount = invoice.include_gst ? grandTotal : subtotal
+        const inWordsAmount = grandTotal
         doc.text(('RUPEES ' + toWords(Math.round(inWordsAmount)) + ' ONLY').toUpperCase(), margin, y)
         y += 20
 
@@ -606,7 +610,7 @@ export default function ViewInvoicePage() {
           y += 4
         }
 
-        // ===== TAX INFORMATION – now conditionally shown only if GST is included =====
+        // ===== TAX INFORMATION – only if GST included =====
         if (invoice.include_gst) {
           y += 6
           doc.setFontSize(9)
@@ -628,7 +632,7 @@ export default function ViewInvoicePage() {
 
           doc.text("GST @ 18% will be charged as per applicable rules.", margin, y)
           y += 4
-          y += 6 // spacing after the block
+          y += 6
         }
 
         // ===== NOTES =====
@@ -646,7 +650,7 @@ export default function ViewInvoicePage() {
           y += (noteLines.length * 4)
         }
 
-        // ===== FOOTER (signature block) =====
+        // ===== FOOTER =====
         y += 10
         doc.setFont('helvetica', 'normal')
         doc.setFontSize(9)
@@ -735,7 +739,7 @@ export default function ViewInvoicePage() {
   }
 
   const mappedItems = getMappedItems()
-  const { subtotal, sgst, cgst, grandTotal } = calculateTotals()
+  const { subtotal, discountAmount, discountType, discountValue, sgst, cgst, grandTotal } = getTotals()
   const includeGst = invoice.include_gst ?? true
 
   return (
@@ -920,7 +924,6 @@ export default function ViewInvoicePage() {
               <p className="text-xs text-muted-foreground uppercase tracking-wide mb-0.5">Client Address</p>
               <p className="font-medium">{invoice.client_address ?? "-"}</p>
             </div>
-            {/* NEW: Client GSTIN row */}
             <div className="sm:col-span-2">
               <p className="text-xs text-muted-foreground uppercase tracking-wide mb-0.5">Client GSTIN</p>
               <p className="font-medium">{invoice.client_gstin || "-"}</p>
@@ -995,16 +998,26 @@ export default function ViewInvoicePage() {
           </CardContent>
         </Card>
 
-        {/* TOTALS */}
+        {/* TOTALS with discount */}
         <Card>
           <CardContent className="pt-6">
             <div className="flex flex-col items-end gap-3 max-w-xs ml-auto">
+              <div className="flex justify-between w-full text-sm">
+                <span className="text-muted-foreground">Subtotal:</span>
+                <span className="font-medium">₹{subtotal.toLocaleString("en-IN")}</span>
+              </div>
+
+              {discountAmount > 0 && (
+                <div className="flex justify-between w-full text-sm">
+                  <span className="text-muted-foreground">
+                    Discount {discountType === "percentage" ? `(${discountValue}%)` : `(₹${discountValue})`}:
+                  </span>
+                  <span className="font-medium text-red-600">- ₹{discountAmount.toLocaleString("en-IN")}</span>
+                </div>
+              )}
+
               {includeGst ? (
                 <>
-                  <div className="flex justify-between w-full text-sm">
-                    <span className="text-muted-foreground">Subtotal:</span>
-                    <span className="font-medium">₹{subtotal.toLocaleString("en-IN")}</span>
-                  </div>
                   <div className="flex justify-between w-full text-sm">
                     <span className="text-muted-foreground">SGST (9%):</span>
                     <span className="font-medium">₹{sgst.toLocaleString("en-IN")}</span>
@@ -1014,7 +1027,7 @@ export default function ViewInvoicePage() {
                     <span className="font-medium">₹{cgst.toLocaleString("en-IN")}</span>
                   </div>
                   <div className="border-t border-border pt-2 mt-1 flex justify-between w-full">
-                    <span className="text-lg font-bold">Grand Total:</span>
+                    <span className="text-lg font-bold">Total:</span>
                     <span className="text-lg font-bold text-blue-600">
                       ₹{grandTotal.toLocaleString("en-IN")}
                     </span>
@@ -1024,7 +1037,7 @@ export default function ViewInvoicePage() {
                 <div className="flex justify-between w-full">
                   <span className="text-lg font-bold">Total:</span>
                   <span className="text-lg font-bold text-blue-600">
-                    ₹{subtotal.toLocaleString("en-IN")}
+                    ₹{grandTotal.toLocaleString("en-IN")}
                   </span>
                 </div>
               )}
@@ -1123,7 +1136,6 @@ export default function ViewInvoicePage() {
               </Select>
             </div>
 
-            {/* NEW: Client GSTIN in edit modal */}
             <div className="space-y-2">
               <Label htmlFor="edit-client-gstin">Client GSTIN (Optional)</Label>
               <Input
@@ -1153,6 +1165,11 @@ export default function ViewInvoicePage() {
                 <p className="text-muted-foreground">
                   <span className="font-medium text-foreground">Subtotal:</span> ₹{invoice.subtotal.toLocaleString("en-IN")}
                 </p>
+                {invoice.discount_amount && invoice.discount_amount > 0 && (
+                  <p className="text-muted-foreground">
+                    <span className="font-medium text-foreground">Discount:</span> -₹{invoice.discount_amount.toLocaleString("en-IN")}
+                  </p>
+                )}
                 {invoice.include_gst && (
                   <>
                     <p className="text-muted-foreground">
@@ -1164,7 +1181,7 @@ export default function ViewInvoicePage() {
                   </>
                 )}
                 <p className="text-foreground font-semibold border-t border-border pt-2">
-                  Grand Total: ₹{invoice.grand_total.toLocaleString("en-IN")}
+                  Total: ₹{invoice.grand_total.toLocaleString("en-IN")}
                 </p>
               </div>
             )}
