@@ -9,9 +9,16 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { supabase, type QuotationItem } from "@/lib/supabase"
 import { useAuth } from "@/lib/auth-context"
-import { Plus, Trash2, Save, ArrowLeft, Loader2 } from "lucide-react"
+import { Plus, Trash2, Save, ArrowLeft, Loader2, Percent } from "lucide-react"
 import { toast } from "sonner"
 import Link from "next/link"
 
@@ -34,11 +41,13 @@ export default function NewInvoicePage() {
   ])
   const [includeGst, setIncludeGst] = useState(true)
   const [gstRate, setGstRate] = useState(18)
+  const [discountType, setDiscountType] = useState<"percentage" | "fixed">("percentage")
+  const [discountValue, setDiscountValue] = useState(0)
   const [notes, setNotes] = useState("")
   const [invoiceDate, setInvoiceDate] = useState("")
   const [dueDate, setDueDate] = useState("")
   const [paymentTerms, setPaymentTerms] = useState("")
-  const [clientGstin, setClientGstin] = useState("") // NEW
+  const [clientGstin, setClientGstin] = useState("")
 
   // --- organization ID ---
   const [currentOrgId, setCurrentOrgId] = useState<string | null>(null)
@@ -68,10 +77,16 @@ export default function NewInvoicePage() {
     setInvoiceDate(today)
   }, [])
 
+  // --- totals with discount ---
   const subtotal = items.reduce((sum, item) => sum + item.amount, 0)
+  const discountAmount = Math.min(
+    subtotal,
+    Math.max(0, discountType === "percentage" ? subtotal * (Number(discountValue) || 0) / 100 : Number(discountValue) || 0)
+  )
+  const discountedSubtotal = subtotal - discountAmount
   const gstRate_ = Number(gstRate ?? 18) / 100
-  const gstAmount = includeGst ? Math.round(subtotal * gstRate_) : 0
-  const total = subtotal + gstAmount
+  const gstAmount = includeGst ? Math.round(discountedSubtotal * gstRate_) : 0
+  const total = discountedSubtotal + gstAmount
 
   const handleAddItem = () => {
     const newId = String(Math.max(...items.map(i => parseInt(i.id) || 0), 0) + 1)
@@ -135,9 +150,14 @@ export default function NewInvoicePage() {
       const calculatedSubtotal = (items ?? []).reduce((sum, item) => {
         return sum + (Number(item.quantity ?? 0) * Number(item.unit_price ?? 0))
       }, 0)
-      const sgst = includeGst ? Math.round(calculatedSubtotal * 0.09) : 0
-      const cgst = includeGst ? Math.round(calculatedSubtotal * 0.09) : 0
-      const grandTotal = calculatedSubtotal + sgst + cgst
+      const calculatedDiscountAmount = Math.min(
+        calculatedSubtotal,
+        Math.max(0, discountType === "percentage" ? calculatedSubtotal * (Number(discountValue) || 0) / 100 : Number(discountValue) || 0)
+      )
+      const discountedSubtotal = calculatedSubtotal - calculatedDiscountAmount
+      const sgst = includeGst ? Math.round(discountedSubtotal * 0.09) : 0
+      const cgst = includeGst ? Math.round(discountedSubtotal * 0.09) : 0
+      const grandTotal = discountedSubtotal + sgst + cgst
 
       const { data, error } = await supabase
         .from("invoices")
@@ -156,11 +176,14 @@ export default function NewInvoicePage() {
           client_district: customerDistrict,
           client_state: customerState,
           client_pin_code: customerPinCode,
-          client_gstin: clientGstin || null, // NEW
+          client_gstin: clientGstin || null,
           subject: subject,
           body_text: bodyText,
           items: items,
           subtotal: calculatedSubtotal,
+          discount_type: discountType,
+          discount_value: Number(discountValue) || 0,
+          discount_amount: calculatedDiscountAmount,
           sgst: sgst,
           cgst: cgst,
           grand_total: grandTotal,
@@ -273,6 +296,54 @@ export default function NewInvoicePage() {
           </CardContent>
         </Card>
 
+        {/* Subject and Letter Body */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Letter Details</CardTitle>
+            <CardDescription>Add subject and letter body for this invoice</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="subject">Subject</Label>
+              <Input
+                id="subject"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder="e.g. Invoice for AC AMC services"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="body-text">Letter Body</Label>
+              <Textarea
+                id="body-text"
+                value={bodyText}
+                onChange={(e) => setBodyText(e.target.value)}
+                placeholder="e.g. Respected Sir/Madam, Please find below the invoice details..."
+                rows={4}
+              />
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setBodyText(bodyText + (bodyText ? "\n" : "") + "Respected Sir/Madam,")}
+                >
+                  "Respected Sir/Madam,"
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setBodyText(bodyText + (bodyText ? "\n" : "") + "As per discussion held with you, regarding following works at above mention place. Details are given as below;")}
+                >
+                  "As per discussion..."
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Items */}
         <Card>
           <CardHeader>
@@ -360,7 +431,7 @@ export default function NewInvoicePage() {
           </CardContent>
         </Card>
 
-        {/* Totals */}
+        {/* Totals (with discount) */}
         <Card>
           <CardHeader>
             <CardTitle>Totals</CardTitle>
@@ -370,6 +441,45 @@ export default function NewInvoicePage() {
               <div className="flex justify-between items-center text-sm">
                 <span className="text-muted-foreground">Subtotal:</span>
                 <span className="font-medium">₹{subtotal.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</span>
+              </div>
+
+              {/* Discount section */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Percent className="size-4 text-muted-foreground shrink-0" />
+                  <Label className="text-sm text-muted-foreground shrink-0">Discount</Label>
+                  <Select value={discountType} onValueChange={(val) => setDiscountType(val as "percentage" | "fixed")}>
+                    <SelectTrigger className="h-9 w-[104px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="percentage">%</SelectItem>
+                      <SelectItem value="fixed">₹ Amount</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={discountValue}
+                    onFocus={(e) => e.target.value = ''}
+                    onBlur={(e) => {
+                      const val = parseFloat(e.target.value)
+                      setDiscountValue(isNaN(val) || val < 0 ? 0 : val)
+                    }}
+                    onChange={(e) => setDiscountValue(parseFloat(e.target.value) || 0)}
+                    placeholder={discountType === "percentage" ? "0" : "0.00"}
+                    className="h-9 w-28"
+                  />
+                </div>
+                {discountAmount > 0 && (
+                  <div className="flex justify-between items-center text-sm pl-6">
+                    <span className="text-muted-foreground">Discount Amount:</span>
+                    <span className="font-medium text-red-600">
+                      − ₹{discountAmount.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-3">
@@ -438,7 +548,6 @@ export default function NewInvoicePage() {
                 />
               </div>
             </div>
-            {/* NEW: Client GSTIN field */}
             <div className="space-y-2">
               <Label htmlFor="client-gstin">
                 Company GSTIN <span className="text-xs text-muted-foreground">(Optional)</span>
