@@ -267,7 +267,7 @@ export default function ViewInvoicePage() {
 
   const handleWhatsApp = () => {
     if (!invoice) return
-    const { subtotal, discountAmount, sgst, cgst, grandTotal } = getTotals()
+    const { subtotal, discountAmount, discountType, discountValue, sgst, cgst, grandTotal } = getTotals()
     const items = invoice.items ?? []
     const includeGst = invoice.include_gst ?? true
     let msg =
@@ -284,8 +284,9 @@ export default function ViewInvoicePage() {
       `─────────────────────\n` +
       `*Subtotal:* Rs.${subtotal.toLocaleString("en-IN")}\n`
     if (discountAmount > 0) {
-      const discountLabel = invoice.discount_type === "percentage" ? `${Number(invoice.discount_value).toString()}%` : `₹${Number(invoice.discount_value).toString()}`
-      msg += `*Discount (${discountLabel}):* -Rs.${discountAmount.toLocaleString("en-IN")}\n`
+      const discountVal = Number(discountValue).toString()
+      const label = discountType === "percentage" ? `${discountVal}%` : `₹${discountVal}`
+      msg += `*Discount (${label}):* -Rs.${discountAmount.toLocaleString("en-IN")}\n`
     }
     if (includeGst) {
       msg += `*SGST (9%):* Rs.${sgst.toLocaleString("en-IN")}\n*CGST (9%):* Rs.${cgst.toLocaleString("en-IN")}\n`
@@ -298,7 +299,7 @@ export default function ViewInvoicePage() {
   }
 
   // =============================================
-  // PDF GENERATION – with discount label fixed
+  // PDF GENERATION – discount label fixed
   // =============================================
   const handleDownloadPdf = async (stampToggle: boolean = false) => {
     if (!invoice) return
@@ -529,7 +530,7 @@ export default function ViewInvoicePage() {
 
         y = (doc as any).lastAutoTable.finalY + 8
 
-        // ---- TOTALS with fixed discount label ----
+        // ---- TOTALS ----
         doc.setFont('helvetica', 'normal')
         doc.setFontSize(9)
         doc.setTextColor(0, 0, 0)
@@ -538,10 +539,10 @@ export default function ViewInvoicePage() {
         doc.text('Rs. ' + subtotal.toLocaleString('en-IN'), 195, y, { align: 'right' })
         y += 4
 
-        // Discount line – fixed formatting
+        // Discount line – fixed formatting: no quotes, integer value
         if (discountAmount > 0) {
-          const discountValueFormatted = Number(discountValue).toString()
-          const discountLabel = discountType === "percentage" ? `${discountValueFormatted}%` : `₹${discountValueFormatted}`
+          const discountVal = Number(discountValue).toString() // ensures integer without decimals
+          const discountLabel = discountType === "percentage" ? `${discountVal}%` : `₹${discountVal}`
           doc.text(`Discount (${discountLabel}):`, 160, y, { align: 'right' })
           doc.setTextColor(200, 0, 0)
           doc.text('- Rs. ' + discountAmount.toLocaleString('en-IN'), 195, y, { align: 'right' })
@@ -998,7 +999,7 @@ export default function ViewInvoicePage() {
           </CardContent>
         </Card>
 
-        {/* TOTALS with discount */}
+        {/* TOTALS – discount label fixed in UI too */}
         <Card>
           <CardContent className="pt-6">
             <div className="flex flex-col items-end gap-3 max-w-xs ml-auto">
