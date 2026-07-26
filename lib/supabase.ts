@@ -247,6 +247,9 @@ export type Invoice = {
   body_text: string | null
   items: QuotationItem[]
   subtotal: number
+  discount_type?: "percentage" | "fixed" | null   // new
+  discount_value?: number | null                  // new
+  discount_amount?: number | null                 // new
   sgst: number
   cgst: number
   grand_total: number
