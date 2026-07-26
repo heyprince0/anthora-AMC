@@ -127,9 +127,11 @@ export default function ContractsPage() {
 
   const [subscription, setSubscription] = useState<any>(null)
   const [plan, setPlan] = useState<any>(null)
+  const [subscriptionLoading, setSubscriptionLoading] = useState(true)
   const [contractCount, setContractCount] = useState(0)
   const [showLimitModal, setShowLimitModal] = useState(false)
   const [limitModalType, setLimitModalType] = useState<LimitModalType>('expired')
+  const [limitModalCustom, setLimitModalCustom] = useState<{ title?: string; description?: string }>({})
   const [limitValue, setLimitValue] = useState(0)
   const [showPlanModal, setShowPlanModal] = useState(false)
   const [dataReady, setDataReady] = useState(false)
@@ -162,6 +164,7 @@ export default function ContractsPage() {
   useEffect(() => {
     const fetchSubscription = async () => {
       if (!currentOrgId) return
+      setSubscriptionLoading(true)
       try {
         const { data: subData, error } = await supabase
           .from('subscriptions')
@@ -184,6 +187,8 @@ export default function ContractsPage() {
         }
       } catch (error) {
         console.error('Error fetching subscription:', error)
+      } finally {
+        setSubscriptionLoading(false)
       }
     }
     fetchSubscription()
@@ -237,6 +242,10 @@ export default function ContractsPage() {
 
     if (isExpired) {
       setLimitModalType('expired')
+      setLimitModalCustom({
+        title: `Your ${plan?.name || 'current'} plan has expired`,
+        description: `Renew your ${plan?.name || 'current'} plan to continue adding contracts.`,
+      })
       setShowLimitModal(true)
       if (showOnLoad) setAutoShown(true)
       return true
@@ -245,6 +254,7 @@ export default function ContractsPage() {
     const maxContracts = plan?.max_contracts ?? 99999
     if (contractCount >= maxContracts) {
       setLimitModalType('contracts-limit')
+      setLimitModalCustom({})
       setLimitValue(maxContracts)
       setShowLimitModal(true)
       if (showOnLoad) setAutoShown(true)
@@ -350,6 +360,10 @@ export default function ContractsPage() {
 
   const handleAddClick = () => {
     if (userRole === 'technician') return // safety
+    if (subscriptionLoading) {
+      toast.error("Checking your plan status, please try again in a moment...")
+      return
+    }
     const blocked = checkAndShowLimitModal(false)
     if (blocked) return
     setEditingContract(null)
@@ -518,7 +532,7 @@ export default function ContractsPage() {
             </Button>
             {/* Hide Add Contract button for technicians */}
             {!isTechnician && (
-              <Button onClick={handleAddClick}>
+              <Button onClick={handleAddClick} disabled={subscriptionLoading}>
                 <Plus className="mr-2 size-4" />
                 Add Contract
               </Button>
@@ -713,6 +727,8 @@ export default function ContractsPage() {
           type={limitModalType}
           onUpgrade={handleViewPlans}
           limitValue={limitValue}
+          customTitle={limitModalCustom.title}
+          customDescription={limitModalCustom.description}
         />
 
         {/* Plan Selection Modal */}
