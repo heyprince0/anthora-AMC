@@ -9,9 +9,16 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { supabase, type Quotation, type QuotationItem } from "@/lib/supabase"
 import { useAuth } from "@/lib/auth-context"
-import { Plus, Trash2, Save, ArrowLeft, Loader2 } from "lucide-react"
+import { Plus, Trash2, Save, ArrowLeft, Loader2, Percent } from "lucide-react"
 import { toast } from "sonner"
 import Link from "next/link"
 
@@ -34,6 +41,8 @@ export default function EditQuotationPage() {
   const [items, setItems] = useState<QuotationItem[]>([])
   const [includeGst, setIncludeGst] = useState(true)
   const [gstRate, setGstRate] = useState(18)
+  const [discountType, setDiscountType] = useState<"percentage" | "fixed">("percentage")
+  const [discountValue, setDiscountValue] = useState(0)
   const [notes, setNotes] = useState("")
 
   // --- ADDED: organization ID ---
@@ -90,6 +99,8 @@ export default function EditQuotationPage() {
       setItems(quotation.items)
       setIncludeGst(quotation.include_gst)
       setGstRate(quotation.gst_rate || 18)
+      setDiscountType(quotation.discount_type === "fixed" ? "fixed" : "percentage")
+      setDiscountValue(typeof quotation.discount_value === "number" ? quotation.discount_value : 0)
       setNotes(quotation.notes || "")
     } catch (error) {
       console.error("Error loading quotation:", error)
@@ -146,9 +157,14 @@ export default function EditQuotationPage() {
       const calculatedSubtotal = (items ?? []).reduce((sum, item) => {
         return sum + (Number(item.quantity ?? 0) * Number(item.unit_price ?? 0))
       }, 0)
-      const sgst = includeGst ? Math.round(calculatedSubtotal * 0.09) : 0
-      const cgst = includeGst ? Math.round(calculatedSubtotal * 0.09) : 0
-      const grandTotal = calculatedSubtotal + sgst + cgst
+      const calculatedDiscountAmount = Math.min(
+        calculatedSubtotal,
+        Math.max(0, discountType === "percentage" ? calculatedSubtotal * (Number(discountValue) || 0) / 100 : Number(discountValue) || 0)
+      )
+      const discountedSubtotal = calculatedSubtotal - calculatedDiscountAmount
+      const sgst = includeGst ? Math.round(discountedSubtotal * 0.09) : 0
+      const cgst = includeGst ? Math.round(discountedSubtotal * 0.09) : 0
+      const grandTotal = discountedSubtotal + sgst + cgst
 
       // Update with org_id filter for safety
       const { error } = await supabase
@@ -164,6 +180,9 @@ export default function EditQuotationPage() {
           body_text: bodyText,
           items: items,
           subtotal: calculatedSubtotal,
+          discount_type: discountType,
+          discount_value: Number(discountValue) || 0,
+          discount_amount: calculatedDiscountAmount,
           sgst: sgst,
           cgst: cgst,
           grand_total: grandTotal,
@@ -185,10 +204,15 @@ export default function EditQuotationPage() {
     }
   }
 
-  // --- FIX: Compute subtotal, gstAmount, and total for display ---
+  // --- FIX: Compute subtotal, discount, gstAmount, and total for display ---
   const subtotal = items.reduce((sum, item) => sum + (item.quantity || 0) * (item.unit_price || 0), 0)
-  const gstAmount = includeGst ? subtotal * (gstRate / 100) : 0
-  const total = subtotal + gstAmount
+  const discountAmount = Math.min(
+    subtotal,
+    Math.max(0, discountType === "percentage" ? subtotal * (Number(discountValue) || 0) / 100 : Number(discountValue) || 0)
+  )
+  const discountedSubtotal = subtotal - discountAmount
+  const gstAmount = includeGst ? discountedSubtotal * (gstRate / 100) : 0
+  const total = discountedSubtotal + gstAmount
 
   if (loading) {
     return (
@@ -433,6 +457,44 @@ export default function EditQuotationPage() {
               <div className="flex justify-between items-center text-sm">
                 <span className="text-muted-foreground">Subtotal:</span>
                 <span className="font-medium">₹{subtotal.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</span>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Percent className="size-4 text-muted-foreground shrink-0" />
+                  <Label className="text-sm text-muted-foreground shrink-0">Discount</Label>
+                  <Select value={discountType} onValueChange={(val) => setDiscountType(val as "percentage" | "fixed")}>
+                    <SelectTrigger className="h-9 w-[104px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="percentage">%</SelectItem>
+                      <SelectItem value="fixed">₹ Amount</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={discountValue}
+                    onFocus={(e) => e.target.value = ''}
+                    onBlur={(e) => {
+                      const val = parseFloat(e.target.value)
+                      setDiscountValue(isNaN(val) || val < 0 ? 0 : val)
+                    }}
+                    onChange={(e) => setDiscountValue(parseFloat(e.target.value) || 0)}
+                    placeholder={discountType === "percentage" ? "0" : "0.00"}
+                    className="h-9 w-28"
+                  />
+                </div>
+                {discountAmount > 0 && (
+                  <div className="flex justify-between items-center text-sm pl-6">
+                    <span className="text-muted-foreground">Discount Amount:</span>
+                    <span className="font-medium text-red-600">
+                      − ₹{discountAmount.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-3">
