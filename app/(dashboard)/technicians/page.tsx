@@ -65,7 +65,7 @@ export default function TechniciansPage() {
   const [currentOrgId, setCurrentOrgId] = useState<string | null>(null)
   const [isChecking, setIsChecking] = useState(true) // <-- new loading state for redirect
 
-  const { maxTechnicians, currentTechnicianCount, status, isLoading: limitsLoading } = usePlanLimits(currentOrgId)
+  const { maxTechnicians, currentTechnicianCount, status, planName, isLoading: limitsLoading } = usePlanLimits(currentOrgId)
 
   const [showLimitModal, setShowLimitModal] = useState(false)
   const [limitModalType, setLimitModalType] = useState<'expired' | 'resource-limit'>('expired')
@@ -205,9 +205,16 @@ export default function TechniciansPage() {
   }
 
   const handleAddClick = () => {
+    if (limitsLoading) {
+      toast.error("Checking your plan status, please try again in a moment...")
+      return
+    }
     if (status === 'expired' || status === 'cancelled') {
       setLimitModalType('expired')
-      setLimitModalCustom({})
+      setLimitModalCustom({
+        title: `Your ${planName || 'current'} plan has expired`,
+        description: `Renew your ${planName || 'current'} plan to continue adding technicians.`,
+      })
       setShowLimitModal(true)
       return
     }
@@ -260,7 +267,7 @@ export default function TechniciansPage() {
             <h1 className="text-2xl font-bold text-foreground">Technicians</h1>
             <p className="text-muted-foreground">Manage your service technicians and their assignments</p>
           </div>
-          <Button onClick={handleAddClick}>
+          <Button onClick={handleAddClick} disabled={limitsLoading}>
             <Plus className="mr-2 size-4" />
             Add Technician
           </Button>
