@@ -508,7 +508,7 @@ export default function ViewQuotationPage() {
 
         y = (doc as any).lastAutoTable.finalY + 8
 
-        // --- TOTALS ---
+        // ---- TOTALS SECTION ----
         doc.setFont('helvetica', 'normal')
         doc.setFontSize(9)
         doc.setTextColor(0, 0, 0)
@@ -518,15 +518,11 @@ export default function ViewQuotationPage() {
         doc.text('Rs. ' + subtotal.toLocaleString('en-IN'), 195, y, { align: 'right' })
         y += 4
 
-        // Discount (if any) – FIXED formatting
+        // Discount line (if any) – FIXED: no extra quotes, clean formatting
         if (discountAmount > 0) {
           const discountLabel = discountType === "percentage"
             ? `${discountValue}%`
             : `₹${discountValue}`
-          // Use same font and size as subtotal
-          doc.setFont('helvetica', 'normal')
-          doc.setFontSize(9)
-          doc.setTextColor(0, 0, 0)
           doc.text(`Discount (${discountLabel}):`, 160, y, { align: 'right' })
           doc.setTextColor(200, 0, 0)
           doc.text('- Rs. ' + discountAmount.toLocaleString('en-IN'), 195, y, { align: 'right' })
@@ -696,7 +692,6 @@ export default function ViewQuotationPage() {
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-6 max-w-4xl mx-auto">
-        {/* HEADER */}
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div className="flex items-start gap-3">
             <Link href="/quotations">
@@ -776,7 +771,6 @@ export default function ViewQuotationPage() {
           </div>
         </div>
 
-        {/* COMPANY INFO */}
         {profile && (
           <Card>
             <CardHeader>
@@ -819,7 +813,6 @@ export default function ViewQuotationPage() {
           </Card>
         )}
 
-        {/* CUSTOMER INFORMATION */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Customer Information</CardTitle>
@@ -848,7 +841,6 @@ export default function ViewQuotationPage() {
           </CardContent>
         </Card>
 
-        {/* ITEMS TABLE */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Items</CardTitle>
@@ -887,7 +879,6 @@ export default function ViewQuotationPage() {
           </CardContent>
         </Card>
 
-        {/* TOTALS */}
         <Card>
           <CardContent className="pt-6">
             <div className="flex flex-col items-end gap-3 max-w-xs ml-auto">
@@ -934,7 +925,6 @@ export default function ViewQuotationPage() {
         )}
       </div>
 
-      {/* Convert to Invoice Modal */}
       <Dialog open={showConvertModal} onOpenChange={setShowConvertModal}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
