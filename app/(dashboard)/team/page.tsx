@@ -34,7 +34,7 @@ export default function TeamPage() {
   const [currentOrgId, setCurrentOrgId] = useState<string | null>(null)
   const [ownerId, setOwnerId] = useState<string | null>(null)
 
-  const { maxTeamSeats, status, isLoading: limitsLoading } = usePlanLimits(currentOrgId)
+  const { maxTeamSeats, status, planName, isLoading: limitsLoading } = usePlanLimits(currentOrgId)
 
   // Current seats = all members EXCEPT the owner
   const currentTeamSeats = members.filter(m => m.user_id !== ownerId).length
@@ -277,9 +277,17 @@ export default function TeamPage() {
   }
 
   const handleInviteMemberClick = () => {
+    if (limitsLoading) {
+      toast.error("Checking your plan status, please try again in a moment...")
+      return
+    }
+
     if (status === 'expired' || status === 'cancelled') {
       setLimitModalType('expired')
-      setLimitModalCustom({})
+      setLimitModalCustom({
+        title: `Your ${planName || 'current'} plan has expired`,
+        description: `Renew your ${planName || 'current'} plan to continue inviting team members.`,
+      })
       setShowLimitModal(true)
       return
     }
@@ -335,7 +343,7 @@ export default function TeamPage() {
             <p className="text-muted-foreground">Manage your team members and invitations</p>
           </div>
           {userRole === "admin" && (
-            <Button onClick={handleInviteMemberClick}>
+            <Button onClick={handleInviteMemberClick} disabled={limitsLoading}>
               <Plus className="mr-2 size-4" />
               Invite Member
             </Button>
