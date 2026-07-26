@@ -261,15 +261,15 @@ export default function ViewQuotationPage() {
     }))
   }
 
+  // --- totals: return separate sgst and cgst ---
   const getTotals = () => {
-    if (!quotation) return { subtotal: 0, discountAmount: 0, discountType: null, discountValue: 0, discountedSubtotal: 0, gstAmount: 0, gstRate: 18, grandTotal: 0 }
+    if (!quotation) return { subtotal: 0, discountAmount: 0, discountType: null, discountValue: 0, sgst: 0, cgst: 0, grandTotal: 0 }
     const subtotal = quotation.subtotal || 0
     const discountAmount = quotation.discount_amount || 0
-    const discountedSubtotal = subtotal - discountAmount
-    const gstRate = quotation.gst_rate || 18
-    const gstAmount = quotation.include_gst ? (quotation.cgst || 0) + (quotation.sgst || 0) : 0
+    const sgst = quotation.sgst || 0
+    const cgst = quotation.cgst || 0
     const grandTotal = quotation.grand_total || 0
-    return { subtotal, discountAmount, discountType: quotation.discount_type, discountValue: quotation.discount_value || 0, discountedSubtotal, gstAmount, gstRate, grandTotal }
+    return { subtotal, discountAmount, discountType: quotation.discount_type, discountValue: quotation.discount_value || 0, sgst, cgst, grandTotal }
   }
 
   const handleDownloadPdf = async (stampToggle: boolean = false) => {
@@ -350,7 +350,7 @@ export default function ViewQuotationPage() {
       }
 
       const items = quotation.items ?? []
-      const { subtotal, discountAmount, discountType, discountValue, gstAmount, gstRate, grandTotal } = getTotals()
+      const { subtotal, discountAmount, discountType, discountValue, sgst, cgst, grandTotal } = getTotals()
 
       const renderQuotation = (doc: jsPDF): number => {
         let y = margin
@@ -518,7 +518,7 @@ export default function ViewQuotationPage() {
         doc.text('Rs. ' + subtotal.toLocaleString('en-IN'), 195, y, { align: 'right' })
         y += 4
 
-        // Discount line (if any) – FIXED: no extra quotes, clean formatting
+        // Discount (if any)
         if (discountAmount > 0) {
           const discountLabel = discountType === "percentage"
             ? `${discountValue}%`
@@ -530,10 +530,13 @@ export default function ViewQuotationPage() {
           y += 4
         }
 
-        // GST (combined)
+        // SGST and CGST (separate lines)
         if (quotation.include_gst) {
-          doc.text(`GST (${gstRate}%):`, 160, y, { align: 'right' })
-          doc.text('Rs. ' + gstAmount.toLocaleString('en-IN'), 195, y, { align: 'right' })
+          doc.text('SGST (9%):', 160, y, { align: 'right' })
+          doc.text('Rs. ' + sgst.toLocaleString('en-IN'), 195, y, { align: 'right' })
+          y += 4
+          doc.text('CGST (9%):', 160, y, { align: 'right' })
+          doc.text('Rs. ' + cgst.toLocaleString('en-IN'), 195, y, { align: 'right' })
           y += 3
           doc.setDrawColor(0, 0, 0)
           doc.setLineWidth(0.3)
@@ -585,7 +588,7 @@ export default function ViewQuotationPage() {
           doc.setTextColor(40, 40, 40)
           if (profile?.gstin) { doc.text(`GSTIN: ${safeStr(profile.gstin)}`, margin, y); y += 4 }
           if (profile?.pan_number) { doc.text(`PAN: ${safeStr(profile.pan_number)}`, margin, y); y += 4 }
-          doc.text(`GST @ ${gstRate}% will be charged as per applicable rules.`, margin, y)
+          doc.text("GST @ 18% will be charged as per applicable rules.", margin, y)
           y += 4
           y += 6
         }
@@ -685,7 +688,7 @@ export default function ViewQuotationPage() {
     )
   }
 
-  const { subtotal, discountAmount, discountType, discountValue, gstAmount, gstRate, grandTotal } = getTotals()
+  const { subtotal, discountAmount, discountType, discountValue, sgst, cgst, grandTotal } = getTotals()
   const includeGst = quotation.include_gst ?? true
   const mappedItems = getMappedItems()
 
@@ -897,10 +900,16 @@ export default function ViewQuotationPage() {
               )}
 
               {includeGst && (
-                <div className="flex justify-between w-full text-sm">
-                  <span className="text-muted-foreground">GST ({gstRate}%):</span>
-                  <span className="font-medium">₹{gstAmount.toLocaleString("en-IN")}</span>
-                </div>
+                <>
+                  <div className="flex justify-between w-full text-sm">
+                    <span className="text-muted-foreground">SGST (9%):</span>
+                    <span className="font-medium">₹{sgst.toLocaleString("en-IN")}</span>
+                  </div>
+                  <div className="flex justify-between w-full text-sm">
+                    <span className="text-muted-foreground">CGST (9%):</span>
+                    <span className="font-medium">₹{cgst.toLocaleString("en-IN")}</span>
+                  </div>
+                </>
               )}
 
               <div className="border-t border-border pt-2 mt-1 flex justify-between w-full">
@@ -1027,9 +1036,14 @@ export default function ViewQuotationPage() {
                   </p>
                 )}
                 {quotation.include_gst && (
-                  <p className="text-muted-foreground">
-                    <span className="font-medium text-foreground">GST ({quotation.gst_rate}%):</span> ₹{((quotation.cgst || 0) + (quotation.sgst || 0)).toLocaleString("en-IN")}
-                  </p>
+                  <>
+                    <p className="text-muted-foreground">
+                      <span className="font-medium text-foreground">SGST (9%):</span> ₹{quotation.sgst.toLocaleString("en-IN")}
+                    </p>
+                    <p className="text-muted-foreground">
+                      <span className="font-medium text-foreground">CGST (9%):</span> ₹{quotation.cgst.toLocaleString("en-IN")}
+                    </p>
+                  </>
                 )}
                 <p className="text-foreground font-semibold border-t border-border pt-2">
                   Total: ₹{quotation.grand_total.toLocaleString("en-IN")}
