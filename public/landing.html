@@ -654,10 +654,11 @@
 
     /* ─── PRICING ─────────────────────────────────────── */
     .pricing { background: var(--gray-50); }
+    .pricing .container { max-width: 1320px; }
     .pricing-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 28px;
+      gap: 20px;
       margin-top: 56px;
       align-items: stretch;
     }
@@ -665,10 +666,11 @@
       background: white;
       border: 1.5px solid var(--gray-200);
       border-radius: 16px;
-      padding: 36px 32px 32px;
+      padding: clamp(24px, 2.4vw, 36px) clamp(18px, 2vw, 28px) clamp(24px, 2.4vw, 32px);
       display: flex;
       flex-direction: column;
       gap: 0;
+      min-width: 0;
       transition: transform .2s, box-shadow .2s;
       position: relative;
     }
@@ -714,13 +716,13 @@
       margin-bottom: 6px;
     }
     .pricing-price .amount {
-      font-size: 2.6rem;
+      font-size: clamp(1.9rem, 2.6vw, 2.6rem);
       font-weight: 800;
       color: var(--gray-900);
       line-height: 1;
     }
     .pricing-price .currency {
-      font-size: 1.3rem;
+      font-size: clamp(1rem, 1.4vw, 1.3rem);
       font-weight: 700;
       color: var(--gray-700);
       margin-bottom: 4px;
@@ -764,14 +766,15 @@
       gap: 12px;
       margin-bottom: 32px;
       flex: 1;
+      justify-content: flex-start;
     }
     .pricing-features li {
       display: flex;
       align-items: flex-start;
-      gap: 10px;
-      font-size: .9rem;
+      gap: 8px;
+      font-size: clamp(.82rem, .95vw, .9rem);
       color: var(--gray-700);
-      line-height: 1.45;
+      line-height: 1.4;
     }
     .pricing-features li .pf-check {
       width: 18px;
@@ -1188,6 +1191,14 @@
 
     @media (min-width: 640px) and (max-width: 1024px) {
       .pricing-grid { grid-template-columns: repeat(2, 1fr); max-width: 100%; }
+    }
+
+    /* Laptop widths (~1024-1300px): 4 equal columns get too cramped for the
+       longer feature phrases, so drop to 2 columns here instead of jumping
+       straight from tablet to a squeezed desktop 4-col layout. */
+    @media (min-width: 1025px) and (max-width: 1300px) {
+      .pricing-grid { grid-template-columns: repeat(2, 1fr); gap: 24px; max-width: 720px; margin-left: auto; margin-right: auto; }
+      .pricing .container { max-width: 1200px; }
     }
 
     @media (max-width: 768px) {
