@@ -329,23 +329,32 @@ export default function ViewQuotationPage() {
       let stampBase64: string | null = null
       let stampFormat: "JPEG" | "PNG" = "PNG"
       if (stampToggle && profile?.stamp_url) {
-        try {
-          const stampPublicUrl = profile.stamp_url.startsWith('http')
-            ? profile.stamp_url
-            : supabase.storage.from('company-assets').getPublicUrl(profile.stamp_url).data.publicUrl
-          const stampResponse = await fetch(stampPublicUrl)
-          if (!stampResponse.ok) throw new Error(`HTTP ${stampResponse.status}`)
-          const stampBlob = await stampResponse.blob()
-          stampBase64 = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader()
-            reader.onloadend = () => resolve(reader.result as string)
-            reader.onerror = reject
-            reader.readAsDataURL(stampBlob)
-          })
-          stampFormat = stampBlob.type.includes('jpeg') ? 'JPEG' : 'PNG'
-        } catch (e) {
-          console.warn('[Stamp] Failed to load stamp image:', e)
-          toast.warning('Stamp image could not be loaded – skipping stamp')
+        const stampPublicUrl = profile.stamp_url.startsWith('http')
+          ? profile.stamp_url
+          : supabase.storage.from('company-assets').getPublicUrl(profile.stamp_url).data.publicUrl
+
+        const MAX_STAMP_ATTEMPTS = 3
+        for (let attempt = 1; attempt <= MAX_STAMP_ATTEMPTS; attempt++) {
+          try {
+            const stampResponse = await fetch(stampPublicUrl, { cache: 'no-store' })
+            if (!stampResponse.ok) throw new Error(`HTTP ${stampResponse.status}`)
+            const stampBlob = await stampResponse.blob()
+            stampBase64 = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader()
+              reader.onloadend = () => resolve(reader.result as string)
+              reader.onerror = reject
+              reader.readAsDataURL(stampBlob)
+            })
+            stampFormat = stampBlob.type.includes('jpeg') ? 'JPEG' : 'PNG'
+            break
+          } catch (e) {
+            console.warn(`[Stamp] Attempt ${attempt} failed:`, e)
+            if (attempt === MAX_STAMP_ATTEMPTS) {
+              toast.warning('Stamp image could not be loaded – skipping stamp')
+            } else {
+              await new Promise(res => setTimeout(res, 400 * attempt))
+            }
+          }
         }
       }
 
