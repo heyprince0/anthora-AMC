@@ -330,10 +330,10 @@ export default function ViewQuotationPage() {
       let stampFormat: "JPEG" | "PNG" = "PNG"
       if (stampToggle && profile?.stamp_url) {
         try {
-          const { data: publicUrlData } = supabase.storage
-            .from('company-assets')
-            .getPublicUrl(profile.stamp_url)
-          const stampResponse = await fetch(publicUrlData.publicUrl)
+          const stampPublicUrl = profile.stamp_url.startsWith('http')
+            ? profile.stamp_url
+            : supabase.storage.from('company-assets').getPublicUrl(profile.stamp_url).data.publicUrl
+          const stampResponse = await fetch(stampPublicUrl)
           if (!stampResponse.ok) throw new Error(`HTTP ${stampResponse.status}`)
           const stampBlob = await stampResponse.blob()
           stampBase64 = await new Promise<string>((resolve, reject) => {
@@ -1076,3 +1076,4 @@ export default function ViewQuotationPage() {
     </DashboardLayout>
   )
 }
+
