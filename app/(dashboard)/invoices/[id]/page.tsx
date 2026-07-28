@@ -351,22 +351,30 @@ export default function ViewInvoicePage() {
       let stampBase64: string | null = null
       let stampFormat: "JPEG" | "PNG" = "PNG"
       if (stampToggle && profile?.stamp_url) {
-        try {
-          const { data: publicUrlData } = supabase.storage
-            .from('company-assets')
-            .getPublicUrl(profile.stamp_url)
-          const stampResponse = await fetch(publicUrlData.publicUrl)
-          if (!stampResponse.ok) throw new Error('Failed to fetch stamp image')
-          const stampBlob = await stampResponse.blob()
-          stampBase64 = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader()
-            reader.onloadend = () => resolve(reader.result as string)
-            reader.onerror = reject
-            reader.readAsDataURL(stampBlob)
-          })
-          stampFormat = stampBlob.type.includes('jpeg') ? 'JPEG' : 'PNG'
-        } catch (e) {
-          console.error('Error loading stamp for PDF:', e)
+        const stampPublicUrl = profile.stamp_url.startsWith('http')
+          ? profile.stamp_url
+          : supabase.storage.from('company-assets').getPublicUrl(profile.stamp_url).data.publicUrl
+
+        const MAX_STAMP_ATTEMPTS = 3
+        for (let attempt = 1; attempt <= MAX_STAMP_ATTEMPTS; attempt++) {
+          try {
+            const stampResponse = await fetch(stampPublicUrl, { cache: 'no-store' })
+            if (!stampResponse.ok) throw new Error('Failed to fetch stamp image')
+            const stampBlob = await stampResponse.blob()
+            stampBase64 = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader()
+              reader.onloadend = () => resolve(reader.result as string)
+              reader.onerror = reject
+              reader.readAsDataURL(stampBlob)
+            })
+            stampFormat = stampBlob.type.includes('jpeg') ? 'JPEG' : 'PNG'
+            break
+          } catch (e) {
+            console.error(`Error loading stamp for PDF (attempt ${attempt}):`, e)
+            if (attempt < MAX_STAMP_ATTEMPTS) {
+              await new Promise(res => setTimeout(res, 400 * attempt))
+            }
+          }
         }
       }
 
@@ -1219,3 +1227,4 @@ export default function ViewInvoicePage() {
     </DashboardLayout>
   )
 }
+
