@@ -13,6 +13,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -38,6 +48,9 @@ export default function CustomersPage() {
   const [filterLocation, setFilterLocation] = useState("all") // location filter, same as Contracts page
   const [modalOpen, setModalOpen] = useState(false)
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [customerToDelete, setCustomerToDelete] = useState<(Customer & { contractCount: number }) | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   // --- Org state ---
   const [currentOrgId, setCurrentOrgId] = useState<string | null>(null)
@@ -151,22 +164,25 @@ export default function CustomersPage() {
     handleFilter(searchTerm, filterLocation)
   }, [filterLocation, customers, allContracts])
 
-  const handleDelete = async (id: string) => {
-    if (!currentOrgId) return
-    if (confirm('Are you sure you want to delete this customer?')) {
-      try {
-        const { error } = await supabase
-          .from('customers')
-          .delete()
-          .eq('id', id)
-          .eq('org_id', currentOrgId)
-        if (error) throw error
-        setCustomers(customers.filter(c => c.id !== id))
-        toast.success('Customer deleted successfully')
-      } catch (error) {
-        console.error('Error deleting customer:', error)
-        toast.error('Failed to delete customer')
-      }
+  const handleDelete = async () => {
+    if (!customerToDelete || !currentOrgId) return
+    setDeleting(true)
+    try {
+      const { error } = await supabase
+        .from('customers')
+        .delete()
+        .eq('id', customerToDelete.id)
+        .eq('org_id', currentOrgId)
+      if (error) throw error
+      setCustomers(customers.filter(c => c.id !== customerToDelete.id))
+      toast.success('Customer deleted successfully')
+      setDeleteDialogOpen(false)
+      setCustomerToDelete(null)
+    } catch (error) {
+      console.error('Error deleting customer:', error)
+      toast.error('Failed to delete customer')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -303,7 +319,10 @@ export default function CustomersPage() {
                           <Edit className="mr-2 size-4" />
                           Edit Customer
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDelete(customer.id)} className="text-red-600">
+                        <DropdownMenuItem
+                          onClick={() => { setCustomerToDelete(customer); setDeleteDialogOpen(true) }}
+                          className="text-red-600"
+                        >
                           <Trash2 className="mr-2 size-4" />
                           Delete
                         </DropdownMenuItem>
@@ -360,6 +379,28 @@ export default function CustomersPage() {
           customTitle={limitModalCustom.title}
           customDescription={limitModalCustom.description}
         />
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Customer</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete {customerToDelete?.name}? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDelete}
+                disabled={deleting}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {deleting ? "Deleting..." : "Delete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   )
