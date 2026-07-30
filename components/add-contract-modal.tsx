@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/select'
 import { supabase, type Customer, type Contract, type Technician, calculateNextServiceDate } from '@/lib/supabase'
 import { toast } from 'sonner'
-import { Loader2, X } from 'lucide-react'
+import { Loader2, X, Search, ChevronsUpDown } from 'lucide-react'
 
 interface AddContractModalProps {
   open: boolean
@@ -69,6 +69,9 @@ export function AddContractModal({
     technicianId: '',
     errors: {},
   })
+  const [customerSearch, setCustomerSearch] = useState('')
+  const [customerDropdownOpen, setCustomerDropdownOpen] = useState(false)
+  const customerDropdownRef = useRef<HTMLDivElement>(null)
 
   const [formData, setFormData] = useState({
     contractName: '',
@@ -88,8 +91,24 @@ export function AddContractModal({
     if (open) {
       loadCustomers()
       loadTechnicians()
+    } else {
+      setCustomerSearch('')
+      setCustomerDropdownOpen(false)
     }
   }, [open])
+
+  // Close the customer search dropdown when clicking outside it
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (customerDropdownRef.current && !customerDropdownRef.current.contains(event.target as Node)) {
+        setCustomerDropdownOpen(false)
+      }
+    }
+    if (customerDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [customerDropdownOpen])
 
   // Auto‑calculate next service date
   useEffect(() => {
@@ -500,25 +519,75 @@ export function AddContractModal({
             />
           </div>
 
-          {/* Customer */}
+          {/* Customer (searchable) */}
           <div className="space-y-2">
             <Label htmlFor="customer">Customer <span className="text-red-500">*</span></Label>
-            <Select value={formData.customerId} onValueChange={(value) => setFormData({ ...formData, customerId: value })}>
-              <SelectTrigger className={errors.customerId ? 'border-red-500' : ''}>
-                <SelectValue placeholder="Select a customer" />
-              </SelectTrigger>
-              <SelectContent>
-                {loadingCustomers ? (
-                  <SelectItem disabled value="loading">Loading customers...</SelectItem>
-                ) : customers.length === 0 ? (
-                  <SelectItem disabled value="empty">No customers available</SelectItem>
-                ) : (
-                  customers.map((customer) => (
-                    <SelectItem key={customer.id} value={customer.id}>{customer.name}</SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+            <div className="relative" ref={customerDropdownRef}>
+              <button
+                type="button"
+                id="customer"
+                onClick={() => setCustomerDropdownOpen((v) => !v)}
+                className={`flex w-full items-center justify-between rounded-md border bg-transparent px-3 py-2 text-sm ${
+                  errors.customerId ? 'border-red-500' : 'border-input'
+                }`}
+              >
+                <span className={formData.customerId ? '' : 'text-muted-foreground'}>
+                  {loadingCustomers
+                    ? 'Loading...'
+                    : customers.find((c) => c.id === formData.customerId)?.name || 'Select a customer'}
+                </span>
+                <ChevronsUpDown className="size-4 opacity-50" />
+              </button>
+
+              {customerDropdownOpen && (
+                <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md">
+                  <div className="flex items-center gap-2 border-b px-3 py-2">
+                    <Search className="size-4 opacity-50" />
+                    <input
+                      autoFocus
+                      type="text"
+                      value={customerSearch}
+                      onChange={(e) => setCustomerSearch(e.target.value)}
+                      placeholder="Search customers..."
+                      className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                    />
+                  </div>
+                  <div className="max-h-60 overflow-y-auto p-1">
+                    {loadingCustomers ? (
+                      <div className="px-2 py-1.5 text-sm text-muted-foreground">Loading customers...</div>
+                    ) : customers.length === 0 ? (
+                      <div className="px-2 py-1.5 text-sm text-muted-foreground">No customers available</div>
+                    ) : (
+                      (() => {
+                        const filtered = customers.filter((customer) =>
+                          customer.name.toLowerCase().includes(customerSearch.toLowerCase())
+                        )
+                        return filtered.length === 0 ? (
+                          <div className="px-2 py-1.5 text-sm text-muted-foreground">No matching customers</div>
+                        ) : (
+                          filtered.map((customer) => (
+                            <button
+                              type="button"
+                              key={customer.id}
+                              onClick={() => {
+                                setFormData({ ...formData, customerId: customer.id })
+                                setCustomerDropdownOpen(false)
+                                setCustomerSearch('')
+                              }}
+                              className={`block w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground ${
+                                customer.id === formData.customerId ? 'bg-accent' : ''
+                              }`}
+                            >
+                              {customer.name}
+                            </button>
+                          ))
+                        )
+                      })()
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
             {errors.customerId && <p className="text-xs text-red-500">{errors.customerId}</p>}
           </div>
 
