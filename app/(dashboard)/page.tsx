@@ -18,7 +18,6 @@ import {
   Plus,
   ArrowRight,
   Clock,
-  Bell,
   Package,
   AlertTriangle,
   DollarSign,
@@ -565,15 +564,6 @@ export default function DashboardPage() {
             <p className="text-muted-foreground">Welcome back! Here{"'"}s your service overview.</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleEnableNotifications}
-              disabled={notificationLoading}
-            >
-              <Bell className="mr-2 size-4" />
-              {notificationLoading ? 'Enabling...' : 'Enable Notifications'}
-            </Button>
             <Button size="sm" onClick={handleAddClick}>
               <Plus className="mr-2 size-4" />
               Add Contract
