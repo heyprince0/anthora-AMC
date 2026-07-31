@@ -519,14 +519,14 @@ export default function ContractsPage() {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-6 min-w-0">
         {/* Page Header */}
-        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between flex-wrap">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Contracts</h1>
             <p className="text-muted-foreground">Manage your AMC contracts and service agreements</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button variant="outline" onClick={exportContractsPDF} disabled={filteredContracts.length === 0}>
               <Download className="mr-2 size-4" />
               Export PDF
