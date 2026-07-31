@@ -13,9 +13,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <SidebarProvider>
       <AppSidebar />
-      <SidebarInset>
+      <SidebarInset className="min-w-0">
         <AppHeader />
-        <main className="flex-1 overflow-auto p-4 md:p-6">
+        <main className="flex-1 min-w-0 w-full overflow-auto p-4 md:p-6">
           {children}
         </main>
         <MembershipListener />
