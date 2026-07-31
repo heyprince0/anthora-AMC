@@ -542,9 +542,9 @@ export default function ContractsPage() {
         </div>
 
         {/* Filters */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center flex-wrap">
+        <Card className="min-w-0">
+          <CardContent className="p-4 min-w-0">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center flex-wrap min-w-0">
               <div className="relative flex-1 min-w-[150px]">
                 <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -557,7 +557,7 @@ export default function ContractsPage() {
               </div>
               <div className="flex gap-2 flex-wrap">
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="w-[160px]">
+                  <SelectTrigger className="w-[140px] sm:w-[160px]">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -571,7 +571,7 @@ export default function ContractsPage() {
 
                 {/* Month Filter */}
                 <Select value={filterMonth} onValueChange={setFilterMonth}>
-                  <SelectTrigger className="w-[160px]">
+                  <SelectTrigger className="w-[140px] sm:w-[160px]">
                     <SelectValue placeholder="Month" />
                   </SelectTrigger>
                   <SelectContent>
@@ -586,7 +586,7 @@ export default function ContractsPage() {
                 {/* Location Filter — options populate automatically from whatever
                     locations users have entered on their contracts */}
                 <Select value={filterLocation} onValueChange={setFilterLocation}>
-                  <SelectTrigger className="w-[160px]">
+                  <SelectTrigger className="w-[140px] sm:w-[160px]">
                     <SelectValue placeholder="Location" />
                   </SelectTrigger>
                   <SelectContent>
@@ -604,20 +604,20 @@ export default function ContractsPage() {
         </Card>
 
         {/* Contracts Table */}
-        <Card>
+        <Card className="min-w-0 w-full">
           <CardHeader>
             <CardTitle>All Contracts</CardTitle>
             <CardDescription>
               You have {filteredContracts.length} contracts {filterStatus !== 'all' || filterMonth !== 'all' || filterLocation !== 'all' ? 'matching filters' : 'in total'}
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="min-w-0 w-full">
             {loading ? (
               <div className="text-center py-8 text-muted-foreground">Loading contracts...</div>
             ) : filteredContracts.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">No contracts found</div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="w-full min-w-0 overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
