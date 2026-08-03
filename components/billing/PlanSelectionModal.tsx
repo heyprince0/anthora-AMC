@@ -45,7 +45,7 @@ const CYCLE_LABELS: Record<BillingCycle, { label: string; period: string; months
 };
 
 // Which plan gets the "Most Popular" badge
-const POPULAR_PLAN_ID = 'pro';
+const POPULAR_PLAN_ID = 'pro-max';
 
 export default function PlanSelectionModal({
   isOpen,
