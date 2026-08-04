@@ -96,6 +96,7 @@ export default function ItemsTable({
   const [searchTerm, setSearchTerm] = useState("")
   const [filterStatus, setFilterStatus] = useState("all")
   const [filterCategory, setFilterCategory] = useState("all")
+  const [filterLocation, setFilterLocation] = useState("all")
 
   const [stockDialogOpen, setStockDialogOpen] = useState(false)
   const [stockDialogMode, setStockDialogMode] = useState<"in" | "out">("in")
@@ -157,12 +158,25 @@ export default function ItemsTable({
       filtered = filtered.filter((item) => item.category_id === filterCategory)
     }
 
+    if (filterLocation !== "all") {
+      filtered = filtered.filter((item) => item.storage_location === filterLocation)
+    }
+
     setFilteredItems(filtered)
   }
 
   useEffect(() => {
     applyFilters()
-  }, [searchTerm, filterStatus, filterCategory, items])
+  }, [searchTerm, filterStatus, filterCategory, filterLocation, items])
+
+  // Unique, non-empty storage locations pulled from the current items list
+  const locations = Array.from(
+    new Set(
+      items
+        .map((item) => item.storage_location)
+        .filter((loc): loc is string => !!loc && loc.trim() !== "")
+    )
+  ).sort((a, b) => a.localeCompare(b))
 
   const handleDelete = async () => {
     if (!itemToDelete) return
@@ -256,6 +270,20 @@ export default function ItemsTable({
               </SelectContent>
             </Select>
 
+            <Select value={filterLocation} onValueChange={setFilterLocation}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Location" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Locations</SelectItem>
+                {locations.map((loc) => (
+                  <SelectItem key={loc} value={loc}>
+                    {loc}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
             <Button onClick={onAddItem}>
               <Plus className="mr-2 size-4" />
               Add Item
@@ -288,7 +316,7 @@ export default function ItemsTable({
               ) : filteredItems.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                    {searchTerm || filterStatus !== "all" || filterCategory !== "all"
+                    {searchTerm || filterStatus !== "all" || filterCategory !== "all" || filterLocation !== "all"
                       ? "No items found matching filters"
                       : "No inventory items yet"}
                   </TableCell>
