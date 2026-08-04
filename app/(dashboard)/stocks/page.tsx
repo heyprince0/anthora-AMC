@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/lib/auth-context"
-import { Package, AlertTriangle, Minus, TrendingUp, Truck, Plus } from "lucide-react"
+import { Package, AlertTriangle, Minus, TrendingUp, Truck, Plus, ScanBarcode } from "lucide-react"
 import { toast } from "sonner"
 import InventorySummaryStrip from "./components/InventorySummaryStrip"
 import ItemsTable from "./components/ItemsTable"
@@ -17,6 +17,7 @@ import CategoriesTab from "./components/CategoriesTab"
 import AddEditItemSheet from "./components/AddEditItemSheet"
 import { usePlanLimits } from "@/lib/hooks/use-plan-limits"
 import LimitReachedModal from "@/components/billing/limit-reached-modal"
+import ScanBarcodeDialog from "./components/ScanBarcodeDialog"
 
 interface InventoryMetrics {
   totalItems: number
@@ -38,6 +39,7 @@ export default function StocksPage() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
   const [categories, setCategories] = useState<any[]>([])
+  const [scanDialogOpen, setScanDialogOpen] = useState(false)
 
   // Plan limits
   const { maxInventory, currentInventoryCount, status, planName, isLoading: limitsLoading } = usePlanLimits(currentOrgId)
@@ -216,6 +218,10 @@ export default function StocksPage() {
             <p className="text-muted-foreground">Manage your stock, items, and parts inventory</p>
           </div>
           <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setScanDialogOpen(true)} disabled={loading}>
+              <ScanBarcode className="mr-2 size-4" />
+              Scan Barcode
+            </Button>
             <Button variant="outline" onClick={handleRefresh} disabled={loading}>
               Refresh
             </Button>
@@ -293,6 +299,17 @@ export default function StocksPage() {
           customTitle={limitModalCustom.title}
           customDescription={limitModalCustom.description}
         />
+
+        {/* Scan Barcode Dialog */}
+        {currentOrgId && (
+          <ScanBarcodeDialog
+            open={scanDialogOpen}
+            onOpenChange={setScanDialogOpen}
+            orgId={currentOrgId}
+            categories={categories}
+            onRefresh={handleRefresh}
+          />
+        )}
       </div>
     </DashboardLayout>
   )
