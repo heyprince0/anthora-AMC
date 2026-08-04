@@ -55,6 +55,7 @@ interface AddEditItemSheetProps {
   categories: Category[]
   orgId: string
   onSuccess: () => void
+  prefillSku?: string
 }
 
 const UNITS = ["piece", "kg", "liter", "meter", "box", "pack", "pair", "set"]
@@ -66,6 +67,7 @@ export default function AddEditItemSheet({
   categories,
   orgId,
   onSuccess,
+  prefillSku,
 }: AddEditItemSheetProps) {
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
@@ -102,7 +104,7 @@ export default function AddEditItemSheet({
     } else {
       setFormData({
         name: "",
-        sku: "",
+        sku: prefillSku || "",
         category_id: "",
         brand: "",
         unit: "piece",
@@ -115,7 +117,7 @@ export default function AddEditItemSheet({
         notes: "",
       })
     }
-  }, [editingItem, open])
+  }, [editingItem, open, prefillSku])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
