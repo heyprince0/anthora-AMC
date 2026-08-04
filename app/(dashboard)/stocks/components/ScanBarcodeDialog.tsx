@@ -83,7 +83,7 @@ export default function ScanBarcodeDialog({
 
   useEffect(() => {
     if (open && scanning === false) {
-      startScanning()
+      waitForElementAndStart()
     }
   }, [open])
 
@@ -92,6 +92,20 @@ export default function ScanBarcodeDialog({
       stopScanning()
     }
   }, [])
+
+  // Waits for the Dialog portal to actually mount "barcode-scanner-container"
+  // into the DOM before starting the scanner. Radix/shadcn Dialog renders its
+  // content through a portal, which lands one render tick after `open`
+  // becomes true — so calling startScanning() directly on [open] can race
+  // ahead of the DOM and fail with "Element with id=... not found".
+  const waitForElementAndStart = () => {
+    const el = document.getElementById("barcode-scanner-container")
+    if (el) {
+      startScanning()
+    } else {
+      requestAnimationFrame(waitForElementAndStart)
+    }
+  }
 
   const startScanning = async () => {
     try {
@@ -285,7 +299,7 @@ export default function ScanBarcodeDialog({
     setScannedCode(null)
     setFoundItem(null)
     if (scanning) {
-      startScanning()
+      waitForElementAndStart()
     }
   }
 
