@@ -29,11 +29,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import { cn } from "@/lib/utils"
 import { supabase, type Customer, type Contract } from "@/lib/supabase"
 import { useAuth } from "@/lib/auth-context"
 import { usePlanLimits } from "@/lib/hooks/use-plan-limits"
 import LimitReachedModal from "@/components/billing/limit-reached-modal"
-import { Plus, Search, MoreHorizontal, Eye, Edit, Phone, MapPin, FileText, Trash2 } from "lucide-react"
+import { Plus, Search, MoreHorizontal, Eye, Edit, Phone, MapPin, FileText, Trash2, Check, ChevronsUpDown } from "lucide-react"
 import { toast } from "sonner"
 import { AddCustomerModal } from "@/components/add-customer-modal"
 import Link from "next/link"
@@ -46,6 +56,7 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterLocation, setFilterLocation] = useState("all") // location filter, same as Contracts page
+  const [locationPopoverOpen, setLocationPopoverOpen] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -262,21 +273,67 @@ export default function CustomersPage() {
                 />
               </div>
 
-              {/* Location Filter — options populate automatically from whatever
-                  locations users have entered on their contracts */}
-              <Select value={filterLocation} onValueChange={setFilterLocation}>
-                <SelectTrigger className="w-[160px]">
-                  <SelectValue placeholder="Location" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Locations</SelectItem>
-                  {availableLocations.map((loc) => (
-                    <SelectItem key={loc} value={loc}>
-                      {loc}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {/* Location Filter — searchable combobox. Options populate
+                  automatically from whatever locations users have entered
+                  on their contracts; typing filters the list live. */}
+              <Popover open={locationPopoverOpen} onOpenChange={setLocationPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={locationPopoverOpen}
+                    className="w-[160px] justify-between font-normal"
+                  >
+                    <span className="truncate">
+                      {filterLocation === "all" ? "Location" : filterLocation}
+                    </span>
+                    <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[200px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search location..." />
+                    <CommandList>
+                      <CommandEmpty>No location found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="all"
+                          onSelect={() => {
+                            setFilterLocation("all")
+                            setLocationPopoverOpen(false)
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 size-4",
+                              filterLocation === "all" ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          All Locations
+                        </CommandItem>
+                        {availableLocations.map((loc) => (
+                          <CommandItem
+                            key={loc}
+                            value={loc}
+                            onSelect={() => {
+                              setFilterLocation(filterLocation === loc ? "all" : loc)
+                              setLocationPopoverOpen(false)
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 size-4",
+                                filterLocation === loc ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            <span className="truncate">{loc}</span>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
           </CardContent>
         </Card>
