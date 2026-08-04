@@ -17,8 +17,21 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { supabase } from "@/lib/supabase"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Trash2 } from "lucide-react"
+import { toast } from "sonner"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface InventoryItem {
   id: string
@@ -50,6 +63,9 @@ export default function StockHistoryDialog({
 }: StockHistoryDialogProps) {
   const [movements, setMovements] = useState<StockMovement[]>([])
   const [loading, setLoading] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [movementToDelete, setMovementToDelete] = useState<StockMovement | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     if (open && item) {
@@ -75,6 +91,35 @@ export default function StockHistoryDialog({
       console.error("Error loading stock history:", error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleDeleteClick = (movement: StockMovement) => {
+    setMovementToDelete(movement)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!movementToDelete) return
+    setDeleting(true)
+    try {
+      const { error } = await supabase
+        .from("inventory_stock_movements")
+        .delete()
+        .eq("id", movementToDelete.id)
+        .eq("org_id", orgId)
+
+      if (error) throw error
+
+      setMovements((prev) => prev.filter((m) => m.id !== movementToDelete.id))
+      toast.success("Stock movement deleted")
+      setDeleteDialogOpen(false)
+      setMovementToDelete(null)
+    } catch (error) {
+      console.error("Error deleting stock movement:", error)
+      toast.error("Failed to delete stock movement")
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -108,6 +153,7 @@ export default function StockHistoryDialog({
                 <TableHead className="py-3 px-4 text-right">Quantity</TableHead>
                 <TableHead className="py-3 px-4">Reason</TableHead>
                 <TableHead className="py-3 px-4">Notes</TableHead>
+                <TableHead className="py-3 px-4 text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -119,11 +165,12 @@ export default function StockHistoryDialog({
                     <TableCell className="py-3 px-4"><Skeleton className="h-4 w-12" /></TableCell>
                     <TableCell className="py-3 px-4"><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell className="py-3 px-4"><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell className="py-3 px-4"><Skeleton className="h-4 w-8 ml-auto" /></TableCell>
                   </TableRow>
                 ))
               ) : movements.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
                     No stock movements recorded
                   </TableCell>
                 </TableRow>
@@ -148,12 +195,44 @@ export default function StockHistoryDialog({
                     <TableCell className="py-3 px-4 text-sm text-muted-foreground">
                       {movement.notes || "—"}
                     </TableCell>
+                    <TableCell className="py-3 px-4 text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 text-red-600 hover:text-red-700 hover:bg-red-500/10"
+                        onClick={() => handleDeleteClick(movement)}
+                      >
+                        <Trash2 className="size-4" />
+                        <span className="sr-only">Delete</span>
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))
               )}
             </TableBody>
           </Table>
         </div>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Stock Movement</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this{" "}
+                {movementToDelete?.movement_type === "in" ? "stock in" : "stock out"} entry of{" "}
+                {movementToDelete?.quantity} unit(s)? This will remove it from the history
+                permanently and will not adjust the item&apos;s current stock quantity.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteConfirm} disabled={deleting} className="bg-red-600">
+                {deleting ? "Deleting..." : "Delete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </DialogContent>
     </Dialog>
   )
