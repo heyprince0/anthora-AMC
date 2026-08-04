@@ -324,8 +324,8 @@ export default function ScanBarcodeDialog({
 
           <div
             id="barcode-scanner-container"
-            className="rounded-lg overflow-hidden bg-black"
-            style={{ width: "100%", height: "300px" }}
+            className="rounded-lg overflow-hidden bg-background"
+            style={{ width: "100%", minHeight: "300px" }}
           />
         </DialogContent>
       </Dialog>
