@@ -176,7 +176,7 @@ export default function AddEditItemSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
+      <SheetContent className="flex w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
         <SheetHeader className="border-b border-border px-6 py-5">
           <SheetTitle className="text-xl">{editingItem ? "Edit Item" : "Add New Item"}</SheetTitle>
           <SheetDescription>
@@ -206,7 +206,7 @@ export default function AddEditItemSheet({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="sku">SKU</Label>
                   <Input
@@ -229,7 +229,7 @@ export default function AddEditItemSheet({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="category">Category</Label>
                   <Select value={formData.category_id} onValueChange={(val) => setFormData({ ...formData, category_id: val })}>
@@ -267,7 +267,7 @@ export default function AddEditItemSheet({
             <section className="flex flex-col gap-4 rounded-xl border border-border bg-muted/30 p-4">
               <h3 className="text-sm font-semibold text-foreground">Pricing &amp; Stock</h3>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="purchase-price">Purchase Price (Rs.)</Label>
                   <Input
@@ -296,7 +296,7 @@ export default function AddEditItemSheet({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="current-stock">Current Stock</Label>
                   <Input
@@ -325,7 +325,7 @@ export default function AddEditItemSheet({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="max-stock">Max Stock Level</Label>
                   <Input
