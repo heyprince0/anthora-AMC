@@ -18,10 +18,11 @@ import {
 } from '@/components/ui/table'
 import { supabase, type Technician, type TechnicianJob, type Customer, type Contract, type ServiceHistory } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
-import { ArrowLeft, Phone, Wrench, Plus, CheckCircle2, Trash2, CalendarIcon, X } from 'lucide-react'
+import { ArrowLeft, Phone, Wrench, Plus, CheckCircle2, Trash2, CalendarIcon, X, ScanBarcode } from 'lucide-react' // <-- added ScanBarcode
 import { toast } from 'sonner'
 import { AddTechnicianJobModal } from '@/components/add-technician-job-modal'
 import { Input } from '@/components/ui/input'
+import ScanBarcodeDialog from '../../stocks/components/ScanBarcodeDialog' // <-- import the dialog
 
 interface JobWithCustomer extends TechnicianJob {
   customerName: string | null
@@ -60,6 +61,9 @@ export default function TechnicianDetailPage() {
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false)
   const [jobToComplete, setJobToComplete] = useState<JobWithCustomer | null>(null)
   const [feedbackNotes, setFeedbackNotes] = useState('')
+
+  // <-- NEW: state for scan dialog
+  const [scanDialogOpen, setScanDialogOpen] = useState(false)
 
   useEffect(() => {
     if (user?.id) {
@@ -387,22 +391,31 @@ export default function TechnicianDetailPage() {
     <DashboardLayout>
       <div className="flex flex-col gap-6">
         {/* Header with back button – conditionally hidden for technicians */}
-        <div className="flex items-center gap-4">
-          {showBackButton && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => router.push('/technicians')}
-              className="size-9"
-            >
-              <ArrowLeft className="size-4" />
-              <span className="sr-only">Back to technicians</span>
+        <div className="flex items-center justify-between"> {/* <-- changed to justify-between */}
+          <div className="flex items-center gap-4">
+            {showBackButton && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => router.push('/technicians')}
+                className="size-9"
+              >
+                <ArrowLeft className="size-4" />
+                <span className="sr-only">Back to technicians</span>
+              </Button>
+            )}
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">{technician.name}</h1>
+              <p className="text-muted-foreground">Technician Details</p>
+            </div>
+          </div>
+          {/* <-- NEW: Scan Barcode button – only for technicians on their own profile */}
+          {role === 'technician' && isOwnProfile && (
+            <Button variant="outline" onClick={() => setScanDialogOpen(true)}>
+              <ScanBarcode className="mr-2 size-4" />
+              Scan Barcode
             </Button>
           )}
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">{technician.name}</h1>
-            <p className="text-muted-foreground">Technician Details</p>
-          </div>
         </div>
 
         {/* Technician Info Card */}
@@ -775,6 +788,17 @@ export default function TechnicianDetailPage() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* <-- NEW: Scan Barcode Dialog – visible only when scanDialogOpen is true */}
+        {currentOrgId && (
+          <ScanBarcodeDialog
+            open={scanDialogOpen}
+            onOpenChange={setScanDialogOpen}
+            orgId={currentOrgId}
+            categories={[]} // Technicians do not manage categories – the dialog works for scanning existing items
+            onRefresh={loadTechnicianDetails}
+          />
+        )}
       </div>
     </DashboardLayout>
   )
