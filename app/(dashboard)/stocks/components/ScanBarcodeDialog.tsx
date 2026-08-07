@@ -344,20 +344,24 @@ export default function ScanBarcodeDialog({
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleDialogClose}>
-              Cancel
-            </AlertDialogCancel>
+          <AlertDialogFooter className="flex flex-col gap-2">
             <Button
-              variant="outline"
+              variant="destructive"
               onClick={() => handleStockAction("out")}
-              className="mr-2"
+              className="w-full"
             >
               Stock Out
             </Button>
-            <Button onClick={() => handleStockAction("in")}>
+            <Button
+              variant="default"
+              onClick={() => handleStockAction("in")}
+              className="w-full"
+            >
               Stock In
             </Button>
+            <AlertDialogCancel onClick={handleDialogClose} className="w-full">
+              Cancel
+            </AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
