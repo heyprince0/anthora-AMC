@@ -22,12 +22,14 @@ import {
   AlertTriangle,
   DollarSign,
   TrendingUp,
+  ScanBarcode,
 } from "lucide-react"
 import { AddContractModal } from "@/components/add-contract-modal"
 import { subscribeToNotifications } from "@/lib/push-notifications"
 import { toast } from "sonner"
 import LimitReachedModal, { LimitModalType } from "@/components/billing/limit-reached-modal"
 import PlanSelectionModal from "@/components/billing/PlanSelectionModal"
+import ScanBarcodeDialog from "@/app/(dashboard)/stocks/components/ScanBarcodeDialog"
 
 interface UpcomingService {
   id: string
@@ -94,6 +96,25 @@ export default function DashboardPage() {
   // --- Inventory metrics state ---
   const [inventoryMetrics, setInventoryMetrics] = useState<InventoryMetrics | null>(null)
   const [inventoryLoading, setInventoryLoading] = useState(true)
+
+  // --- Barcode scan state (for Scan Barcode button, mirrors /stocks page) ---
+  const [scanDialogOpen, setScanDialogOpen] = useState(false)
+  const [categories, setCategories] = useState<any[]>([])
+
+  const loadCategories = async () => {
+    if (!currentOrgId) return
+    try {
+      const { data, error } = await supabase
+        .from("inventory_categories")
+        .select("*")
+        .eq("org_id", currentOrgId)
+
+      if (error) throw error
+      setCategories(data || [])
+    } catch (error) {
+      console.error("Error loading categories:", error)
+    }
+  }
 
   // --- Loading state for redirect check ---
   const [isRedirecting, setIsRedirecting] = useState(true)
@@ -336,6 +357,7 @@ export default function DashboardPage() {
       setUpcomingServices(services.slice(0, 4))
       await fetchContractCount()
       await loadInventoryMetrics() // load inventory data
+      await loadCategories() // load categories for Add Item sheet (used by Scan Barcode flow)
       setDataReady(true)
     } catch (error) {
       console.error('Error loading dashboard data:', error)
@@ -564,6 +586,10 @@ export default function DashboardPage() {
             <p className="text-muted-foreground">Welcome back! Here{"'"}s your service overview.</p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" onClick={() => setScanDialogOpen(true)}>
+              <ScanBarcode className="mr-2 size-4" />
+              Scan Barcode
+            </Button>
             <Button size="sm" onClick={handleAddClick}>
               <Plus className="mr-2 size-4" />
               Add Contract
@@ -711,6 +737,16 @@ export default function DashboardPage() {
           onClose={() => setShowPlanModal(false)}
           onSelectPlan={handleSelectPlan}
         />
+
+        {currentOrgId && (
+          <ScanBarcodeDialog
+            open={scanDialogOpen}
+            onOpenChange={setScanDialogOpen}
+            orgId={currentOrgId}
+            categories={categories}
+            onRefresh={loadInventoryMetrics}
+          />
+        )}
       </div>
     </DashboardLayout>
   )
