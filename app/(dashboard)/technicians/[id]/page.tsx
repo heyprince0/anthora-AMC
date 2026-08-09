@@ -316,6 +316,7 @@ export default function TechnicianDetailPage() {
             const { error: contractUpdateError } = await supabase
               .from('contracts')
               .update({
+                start_date: today,
                 next_service_date: nextServiceDate.toISOString().split('T')[0],
                 status: 'active',
               })
