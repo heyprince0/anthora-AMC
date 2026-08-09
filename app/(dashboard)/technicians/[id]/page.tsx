@@ -261,21 +261,75 @@ export default function TechnicianDetailPage() {
   }
 
   // Same update/toast/reload flow as before — just also writes the feedback
-  // text (if any) into the job's notes before marking it completed.
+  // text (if any) into the job's notes before marking it completed. If the
+  // job was created from a Service Alert assignment (has a contract_id),
+  // this also logs a service_history entry and pushes the contract's next
+  // service date forward — the same completion effect the alerts page's
+  // "Mark Complete" already produces — so the alert clears from that page too.
   const handleConfirmComplete = async () => {
     if (!currentOrgId || !jobToComplete) return
     try {
+      const completionNotes = feedbackNotes.trim() || jobToComplete.notes
+
       const { error } = await supabase
         .from('technician_jobs')
         .update({
           status: 'completed',
           completed_at: new Date().toISOString(),
-          notes: feedbackNotes.trim() || jobToComplete.notes,
+          notes: completionNotes,
         })
         .eq('id', jobToComplete.id)
         .eq('org_id', currentOrgId)
 
       if (error) throw error
+
+      if (jobToComplete.contract_id) {
+        try {
+          const today = new Date().toISOString().split('T')[0]
+
+          const { data: contractData, error: contractFetchError } = await supabase
+            .from('contracts')
+            .select('*')
+            .eq('id', jobToComplete.contract_id)
+            .eq('org_id', currentOrgId)
+            .single()
+
+          if (contractFetchError) throw contractFetchError
+
+          const { error: historyError } = await supabase
+            .from('service_history')
+            .insert({
+              contract_id: jobToComplete.contract_id,
+              technician_id: technicianId,
+              service_date: today,
+              status: 'completed',
+              notes: completionNotes || null,
+              org_id: currentOrgId,
+            })
+
+          if (historyError) throw historyError
+
+          if (contractData?.frequency_days != null) {
+            const nextServiceDate = new Date(today)
+            nextServiceDate.setDate(nextServiceDate.getDate() + contractData.frequency_days)
+
+            const { error: contractUpdateError } = await supabase
+              .from('contracts')
+              .update({
+                next_service_date: nextServiceDate.toISOString().split('T')[0],
+                status: 'active',
+              })
+              .eq('id', jobToComplete.contract_id)
+              .eq('org_id', currentOrgId)
+
+            if (contractUpdateError) throw contractUpdateError
+          }
+        } catch (linkError) {
+          console.error('Error syncing linked service alert completion:', linkError)
+          toast.warning('Job marked complete, but the linked service record may not be fully updated')
+        }
+      }
+
       toast.success('Job marked as complete!')
       setCompleteDialogOpen(false)
       setJobToComplete(null)
