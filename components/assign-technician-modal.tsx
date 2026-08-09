@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -43,15 +44,17 @@ export function AssignTechnicianModal({
 }: AssignTechnicianModalProps) {
   const [technicians, setTechnicians] = useState<Technician[]>([])
   const [technicianId, setTechnicianId] = useState('')
+  const [dueDate, setDueDate] = useState('')
   const [loadingTechs, setLoadingTechs] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
     if (open) {
       setTechnicianId('')
+      setDueDate(contract?.next_service_date || '')
       loadTechnicians()
     }
-  }, [open])
+  }, [open, contract])
 
   const loadTechnicians = async () => {
     if (!orgId) return
@@ -94,7 +97,7 @@ export function AssignTechnicianModal({
           title: contract.contract_name,
           notes: 'Scheduled AMC servicing visit',
           assigned_date: today,
-          due_date: contract.next_service_date || null,
+          due_date: dueDate || null,
           status: 'pending',
           source: 'service_alert',
         })
@@ -123,26 +126,38 @@ export function AssignTechnicianModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-2 py-2">
-          <Label htmlFor="assign-technician">Technician</Label>
-          <Select value={technicianId} onValueChange={setTechnicianId} disabled={loadingTechs}>
-            <SelectTrigger id="assign-technician">
-              <SelectValue placeholder={loadingTechs ? 'Loading...' : 'Select a technician'} />
-            </SelectTrigger>
-            <SelectContent>
-              {technicians.length === 0 ? (
-                <SelectItem value="none" disabled>
-                  No technicians available
-                </SelectItem>
-              ) : (
-                technicians.map((tech) => (
-                  <SelectItem key={tech.id} value={tech.id}>
-                    {tech.name}
+        <div className="flex flex-col gap-4 py-2">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="assign-technician">Technician</Label>
+            <Select value={technicianId} onValueChange={setTechnicianId} disabled={loadingTechs}>
+              <SelectTrigger id="assign-technician">
+                <SelectValue placeholder={loadingTechs ? 'Loading...' : 'Select a technician'} />
+              </SelectTrigger>
+              <SelectContent>
+                {technicians.length === 0 ? (
+                  <SelectItem value="none" disabled>
+                    No technicians available
                   </SelectItem>
-                ))
-              )}
-            </SelectContent>
-          </Select>
+                ) : (
+                  technicians.map((tech) => (
+                    <SelectItem key={tech.id} value={tech.id}>
+                      {tech.name}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="assign-due-date">Due Date</Label>
+            <Input
+              id="assign-due-date"
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+            />
+          </div>
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
