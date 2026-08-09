@@ -57,6 +57,9 @@ export default function TechnicianDetailPage() {
   const [statusValue, setStatusValue] = useState('')
   // Date filter for Job History
   const [historyDateFilter, setHistoryDateFilter] = useState<string>('')
+  // How many job history rows are currently visible ("Load more" pagination)
+  const HISTORY_PAGE_SIZE = 10
+  const [historyVisibleCount, setHistoryVisibleCount] = useState<number>(HISTORY_PAGE_SIZE)
   // Feedback dialog shown when marking a job complete — its text updates the job's notes
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false)
   const [jobToComplete, setJobToComplete] = useState<JobWithCustomer | null>(null)
@@ -360,8 +363,20 @@ export default function TechnicianDetailPage() {
     return jobHistory.filter(item => item.completedDate === historyDateFilter)
   }, [jobHistory, historyDateFilter])
 
+  // Only show the first `historyVisibleCount` rows; rest load via "View More"
+  const visibleHistory = useMemo(() => {
+    return filteredHistory.slice(0, historyVisibleCount)
+  }, [filteredHistory, historyVisibleCount])
+
+  const hasMoreHistory = filteredHistory.length > historyVisibleCount
+
+  const handleLoadMoreHistory = () => {
+    setHistoryVisibleCount((prev) => prev + HISTORY_PAGE_SIZE)
+  }
+
   const clearDateFilter = () => {
     setHistoryDateFilter('')
+    setHistoryVisibleCount(HISTORY_PAGE_SIZE)
   }
 
   if (loading) {
@@ -680,7 +695,10 @@ export default function TechnicianDetailPage() {
                 <Input
                   type="date"
                   value={historyDateFilter}
-                  onChange={(e) => setHistoryDateFilter(e.target.value)}
+                  onChange={(e) => {
+                    setHistoryDateFilter(e.target.value)
+                    setHistoryVisibleCount(HISTORY_PAGE_SIZE)
+                  }}
                   className="pl-8 w-[200px]"
                 />
               </div>
@@ -716,7 +734,7 @@ export default function TechnicianDetailPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredHistory.map((job) => (
+                    {visibleHistory.map((job) => (
                       <TableRow key={job.id}>
                         <TableCell>{job.completedDate || '—'}</TableCell>
                         <TableCell className="font-medium">{job.title}</TableCell>
@@ -735,6 +753,18 @@ export default function TechnicianDetailPage() {
                     ))}
                   </TableBody>
                 </Table>
+              </div>
+            )}
+
+            {hasMoreHistory && (
+              <div className="flex justify-center mt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLoadMoreHistory}
+                >
+                  View More ({filteredHistory.length - historyVisibleCount} remaining)
+                </Button>
               </div>
             )}
           </CardContent>
