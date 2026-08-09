@@ -57,7 +57,6 @@ const adminOnlyNavItems = [
 ]
 
 const technicianNavItems = [
-  { title: "Service Alerts", icon: Bell, href: "/alerts" },
   { title: "Service History", icon: History, href: "/history" },
 ]
 
