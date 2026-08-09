@@ -92,7 +92,7 @@ export function AssignTechnicianModal({
           customer_id: contract.customer_id,
           contract_id: contract.id,
           title: contract.contract_name,
-          notes: null,
+          notes: 'Scheduled AMC servicing visit',
           assigned_date: today,
           due_date: contract.next_service_date || null,
           status: 'pending',
