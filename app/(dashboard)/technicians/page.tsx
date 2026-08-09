@@ -13,7 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { supabase, type Technician, type TechnicianJob, type ServiceHistory } from "@/lib/supabase"
+import { supabase, type Technician, type TechnicianJob } from "@/lib/supabase"
 import { useAuth } from "@/lib/auth-context"
 import { usePlanLimits } from "@/lib/hooks/use-plan-limits"
 import LimitReachedModal from "@/components/billing/limit-reached-modal"
@@ -130,30 +130,18 @@ export default function TechniciansPage() {
 
       if (techniciansError) throw techniciansError
 
-      const { data: completedJobs, error: jobsError } = await supabase
+      const { data: assignedJobs, error: jobsError } = await supabase
         .from('technician_jobs')
         .select('technician_id')
         .eq('org_id', currentOrgId)
-        .eq('status', 'completed')
+        .neq('status', 'completed')
 
       if (jobsError) throw jobsError
 
-      const { data: serviceHistory, error: historyError } = await supabase
-        .from('service_history')
-        .select('technician_id')
-        .eq('org_id', currentOrgId)
-
-      if (historyError) throw historyError
-
       const jobCounts: Record<string, number> = {}
-      ;(completedJobs as TechnicianJob[]).forEach(job => {
+      ;(assignedJobs as TechnicianJob[]).forEach(job => {
         if (job.technician_id) {
           jobCounts[job.technician_id] = (jobCounts[job.technician_id] || 0) + 1
-        }
-      })
-      ;(serviceHistory as ServiceHistory[]).forEach(record => {
-        if (record.technician_id) {
-          jobCounts[record.technician_id] = (jobCounts[record.technician_id] || 0) + 1
         }
       })
 
