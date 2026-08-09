@@ -6,12 +6,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { supabase, type Contract, type Customer, getDaysUntilService } from "@/lib/supabase"
+import { supabase, type Contract, type Customer, type Technician, type TechnicianJob, getDaysUntilService } from "@/lib/supabase"
 import { useAuth } from "@/lib/auth-context"
 import { usePlanLimits } from "@/lib/hooks/use-plan-limits"
 import LimitReachedModal from "@/components/billing/limit-reached-modal"
-import { AlertTriangle, Clock, CalendarClock, CheckCircle2 } from "lucide-react"
+import { AlertTriangle, Clock, CalendarClock, CheckCircle2, UserPlus } from "lucide-react"
 import { MarkCompleteModal } from "@/components/mark-complete-modal"
+import { AssignTechnicianModal } from "@/components/assign-technician-modal"
 import { toast } from "sonner"
 
 interface ServiceAlert {
@@ -29,10 +30,12 @@ function ServiceAlertCard({
   service,
   variant,
   onMarkComplete,
+  onAssignTechnician,
 }: {
   service: ServiceAlert
   variant: "overdue" | "due-today" | "upcoming"
   onMarkComplete: (contract: Contract) => void
+  onAssignTechnician: (contract: Contract) => void
 }) {
   const borderColor = {
     overdue: "border-l-alert-overdue",
@@ -81,6 +84,14 @@ function ServiceAlertCard({
             <Button
               variant="outline"
               size="sm"
+              onClick={() => service.contractData && onAssignTechnician(service.contractData)}
+            >
+              <UserPlus className="mr-2 size-4" />
+              {service.technician ? "Reassign" : "Assign Technician"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => service.contractData && onMarkComplete(service.contractData)}
             >
               <CheckCircle2 className="mr-2 size-4" />
@@ -102,6 +113,10 @@ export default function ServiceAlertsPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null)
   const [currentOrgId, setCurrentOrgId] = useState<string | null>(null)
+
+  // Assign Technician modal state
+  const [assignModalOpen, setAssignModalOpen] = useState(false)
+  const [contractToAssign, setContractToAssign] = useState<Contract | null>(null)
 
   // Plan limits
   const { status, isLoading: limitsLoading } = usePlanLimits(currentOrgId)
@@ -157,6 +172,21 @@ export default function ServiceAlertsPage() {
         .select("*")
         .eq("org_id", currentOrgId)
 
+      // Pending jobs created via "Assign Technician" on this page — used only
+      // to show which technician (if any) is currently assigned to a service,
+      // so the card can display "Assigned to: X" like it already supports.
+      const { data: assignedJobsData } = await supabase
+        .from("technician_jobs")
+        .select("*")
+        .eq("org_id", currentOrgId)
+        .eq("source", "service_alert")
+        .eq("status", "pending")
+
+      const { data: techniciansData } = await supabase
+        .from("technicians")
+        .select("*")
+        .eq("org_id", currentOrgId)
+
       const overdue: ServiceAlert[] = []
       const dueToday: ServiceAlert[] = []
       const upcoming: ServiceAlert[] = []
@@ -165,13 +195,20 @@ export default function ServiceAlertsPage() {
         const customer = (customersData as Customer[])?.find((c) => c.id === contract.customer_id)
         const days = getDaysUntilService(contract.next_service_date)
 
+        const assignedJob = ((assignedJobsData as TechnicianJob[]) || []).find(
+          (job) => job.contract_id === contract.id
+        )
+        const assignedTechnician = assignedJob
+          ? (techniciansData as Technician[])?.find((t) => t.id === assignedJob.technician_id)
+          : null
+
         const alert: ServiceAlert = {
           id: contract.id,
           customer: customer?.name || "Unknown",
           contract: contract.contract_name,
           serviceType: contract.service_type || "Service",
           dueDate: contract.next_service_date,
-          technician: null,
+          technician: assignedTechnician?.name || null,
           contractData: contract,
         }
 
@@ -194,6 +231,13 @@ export default function ServiceAlertsPage() {
     setSelectedContract(contract)
     setModalOpen(true)
   }
+
+  const handleAssignTechnician = (contract: Contract) => {
+    setContractToAssign(contract)
+    setAssignModalOpen(true)
+  }
+
+  const handleAssignSuccess = () => loadServices()
 
   const handleModalSuccess = () => loadServices()
 
@@ -279,6 +323,7 @@ export default function ServiceAlertsPage() {
                     service={service}
                     variant="overdue"
                     onMarkComplete={handleMarkComplete}
+                    onAssignTechnician={handleAssignTechnician}
                   />
                 ))
               )}
@@ -298,6 +343,7 @@ export default function ServiceAlertsPage() {
                     service={service}
                     variant="due-today"
                     onMarkComplete={handleMarkComplete}
+                    onAssignTechnician={handleAssignTechnician}
                   />
                 ))
               )}
@@ -317,6 +363,7 @@ export default function ServiceAlertsPage() {
                     service={service}
                     variant="upcoming"
                     onMarkComplete={handleMarkComplete}
+                    onAssignTechnician={handleAssignTechnician}
                   />
                 ))
               )}
@@ -332,6 +379,16 @@ export default function ServiceAlertsPage() {
             userId={user.id}
             orgId={currentOrgId}
             onSuccess={handleModalSuccess}
+          />
+        )}
+
+        {currentOrgId && (
+          <AssignTechnicianModal
+            open={assignModalOpen}
+            onOpenChange={setAssignModalOpen}
+            contract={contractToAssign}
+            orgId={currentOrgId}
+            onSuccess={handleAssignSuccess}
           />
         )}
 
