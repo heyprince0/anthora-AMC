@@ -56,9 +56,7 @@ const adminOnlyNavItems = [
   { title: "Billing", icon: CreditCard, href: "/billing" },
 ]
 
-const technicianNavItems = [
-  { title: "Service History", icon: History, href: "/history" },
-]
+const technicianNavItems: typeof memberNavItems = []
 
 type CachedProfile = {
   companyName: string
