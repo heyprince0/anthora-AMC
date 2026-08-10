@@ -87,6 +87,20 @@ export function AssignTechnicianModal({
     try {
       const today = new Date().toISOString().split('T')[0]
 
+      // If this contract already has a pending assignment (from an earlier
+      // "Assign Technician" / "Reassign"), remove it first — otherwise the
+      // previously assigned technician keeps seeing it in their profile,
+      // and the alert ends up matched to two pending jobs at once.
+      const { error: deleteError } = await supabase
+        .from('technician_jobs')
+        .delete()
+        .eq('org_id', orgId)
+        .eq('contract_id', contract.id)
+        .eq('source', 'service_alert')
+        .eq('status', 'pending')
+
+      if (deleteError) throw deleteError
+
       const { error } = await supabase
         .from('technician_jobs')
         .insert({
