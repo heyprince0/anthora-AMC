@@ -51,7 +51,7 @@ export function AssignTechnicianModal({
   useEffect(() => {
     if (open) {
       setTechnicianId('')
-      setDueDate(contract?.next_service_date || '')
+      setDueDate(new Date().toISOString().split('T')[0])
       loadTechnicians()
     }
   }, [open, contract])
