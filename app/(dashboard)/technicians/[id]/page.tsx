@@ -39,6 +39,7 @@ interface HistoryDisplayItem {
   source: 'manual' | 'service_alert' | 'service_history'
   notes: string | null
   photoUrl: string | null
+  contractId: string | null
 }
 
 export default function TechnicianDetailPage() {
@@ -196,6 +197,7 @@ export default function TechnicianDetailPage() {
           source: job.source === 'service_alert' ? 'service_alert' : 'manual',
           notes: job.notes,
           photoUrl: job.photo_url,
+          contractId: job.contract_id,
         }
       })
 
@@ -242,11 +244,29 @@ export default function TechnicianDetailPage() {
           source: 'service_history',
           notes: record.notes,
           photoUrl: record.photo_url,
+          contractId: record.contract_id,
         }
       })
 
+      // A job completed from a Service Alert assignment writes both a
+      // technician_jobs row (shown above via historyFromJobs) AND a
+      // service_history row for the same event, so the contract's next
+      // service date can roll forward. Without this filter, that single
+      // completion shows up twice in the table. Drop any service_history
+      // row that shares a contract + completed date with a job we're
+      // already showing — those are the auto-created duplicates.
+      const jobCompletionKeys = new Set(
+        historyFromJobs
+          .filter((item) => item.contractId && item.completedDate)
+          .map((item) => `${item.contractId}|${item.completedDate}`)
+      )
+      const dedupedHistoryFromServiceHistory = historyFromServiceHistory.filter((item) => {
+        if (!item.contractId || !item.completedDate) return true
+        return !jobCompletionKeys.has(`${item.contractId}|${item.completedDate}`)
+      })
+
       // Merge both sources, most recent first
-      const combinedHistory = [...historyFromJobs, ...historyFromServiceHistory].sort((a, b) => {
+      const combinedHistory = [...historyFromJobs, ...dedupedHistoryFromServiceHistory].sort((a, b) => {
         if (!a.completedDate) return 1
         if (!b.completedDate) return -1
         return b.completedDate.localeCompare(a.completedDate)
