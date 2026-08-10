@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef, type ChangeEvent } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { DashboardLayout } from '@/components/dashboard-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/table'
 import { supabase, type Technician, type TechnicianJob, type Customer, type Contract, type ServiceHistory } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
-import { ArrowLeft, Phone, Wrench, Plus, CheckCircle2, Trash2, CalendarIcon, X, ScanBarcode } from 'lucide-react' // <-- added ScanBarcode
+import { ArrowLeft, Phone, Wrench, Plus, CheckCircle2, Trash2, CalendarIcon, X, ScanBarcode, Camera, Loader2 } from 'lucide-react' // <-- added ScanBarcode
 import { toast } from 'sonner'
 import { AddTechnicianJobModal } from '@/components/add-technician-job-modal'
 import { Input } from '@/components/ui/input'
@@ -38,6 +38,7 @@ interface HistoryDisplayItem {
   customerName: string | null
   source: 'manual' | 'service_alert' | 'service_history'
   notes: string | null
+  photoUrl: string | null
 }
 
 export default function TechnicianDetailPage() {
@@ -64,6 +65,11 @@ export default function TechnicianDetailPage() {
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false)
   const [jobToComplete, setJobToComplete] = useState<JobWithCustomer | null>(null)
   const [feedbackNotes, setFeedbackNotes] = useState('')
+  const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null)
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null)
+  const [isCompleting, setIsCompleting] = useState(false)
+  const [photoModalUrl, setPhotoModalUrl] = useState<string | null>(null)
+  const photoInputRef = useRef<HTMLInputElement>(null)
 
   // <-- NEW: state for scan dialog
   const [scanDialogOpen, setScanDialogOpen] = useState(false)
@@ -189,6 +195,7 @@ export default function TechnicianDetailPage() {
           customerName: customer?.name || null,
           source: job.source === 'service_alert' ? 'service_alert' : 'manual',
           notes: job.notes,
+          photoUrl: job.photo_url,
         }
       })
 
@@ -234,6 +241,7 @@ export default function TechnicianDetailPage() {
           customerName: customer?.name || null,
           source: 'service_history',
           notes: record.notes,
+          photoUrl: record.photo_url,
         }
       })
 
@@ -253,10 +261,46 @@ export default function TechnicianDetailPage() {
     }
   }
 
+  const compressPhoto = (file: File): Promise<Blob> =>
+    new Promise((resolve, reject) => {
+      const image = new Image()
+      image.onload = () => {
+        const scale = Math.min(1, 1280 / image.width)
+        const canvas = document.createElement('canvas')
+        canvas.width = Math.round(image.width * scale)
+        canvas.height = Math.round(image.height * scale)
+        const context = canvas.getContext('2d')
+        if (!context) {
+          reject(new Error('Could not prepare image'))
+          return
+        }
+        context.drawImage(image, 0, 0, canvas.width, canvas.height)
+        canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('Could not compress image')), 'image/jpeg', 0.75)
+      }
+      image.onerror = () => reject(new Error('Could not read image'))
+      image.src = URL.createObjectURL(file)
+    })
+
+  const handlePhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl)
+    setSelectedPhoto(file)
+    setPhotoPreviewUrl(URL.createObjectURL(file))
+  }
+
+  const clearSelectedPhoto = () => {
+    if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl)
+    setSelectedPhoto(null)
+    setPhotoPreviewUrl(null)
+    if (photoInputRef.current) photoInputRef.current.value = ''
+  }
+
   // Opens the feedback popup for a job before marking it complete
   const openCompleteDialog = (job: JobWithCustomer) => {
     setJobToComplete(job)
     setFeedbackNotes('')
+    clearSelectedPhoto()
     setCompleteDialogOpen(true)
   }
 
@@ -267,9 +311,26 @@ export default function TechnicianDetailPage() {
   // service date forward — the same completion effect the alerts page's
   // "Mark Complete" already produces — so the alert clears from that page too.
   const handleConfirmComplete = async () => {
-    if (!currentOrgId || !jobToComplete) return
+    if (!currentOrgId || !jobToComplete || isCompleting) return
+    setIsCompleting(true)
     try {
       const completionNotes = feedbackNotes.trim() || jobToComplete.notes
+      let photoUrl: string | null = null
+
+      if (selectedPhoto) {
+        try {
+          const compressedPhoto = await compressPhoto(selectedPhoto)
+          const photoPath = `${currentOrgId}/${jobToComplete.id}-${Date.now()}.jpg`
+          const { error: uploadError } = await supabase.storage
+            .from('job-photos')
+            .upload(photoPath, compressedPhoto, { contentType: 'image/jpeg', upsert: false })
+          if (uploadError) throw uploadError
+          photoUrl = supabase.storage.from('job-photos').getPublicUrl(photoPath).data.publicUrl
+        } catch (photoError) {
+          console.error('Error uploading job photo:', photoError)
+          toast.warning('Job will be completed, but the photo failed to upload')
+        }
+      }
 
       const { error } = await supabase
         .from('technician_jobs')
@@ -277,6 +338,7 @@ export default function TechnicianDetailPage() {
           status: 'completed',
           completed_at: new Date().toISOString(),
           notes: completionNotes,
+          photo_url: photoUrl,
         })
         .eq('id', jobToComplete.id)
         .eq('org_id', currentOrgId)
@@ -304,6 +366,7 @@ export default function TechnicianDetailPage() {
               service_date: today,
               status: 'completed',
               notes: completionNotes || null,
+              photo_url: photoUrl,
               org_id: currentOrgId,
             })
 
@@ -335,10 +398,13 @@ export default function TechnicianDetailPage() {
       setCompleteDialogOpen(false)
       setJobToComplete(null)
       setFeedbackNotes('')
+      clearSelectedPhoto()
       loadTechnicianDetails()
     } catch (error) {
       console.error('Error marking job complete:', error)
       toast.error('Failed to mark job as complete')
+    } finally {
+      setIsCompleting(false)
     }
   }
 
@@ -785,8 +851,9 @@ export default function TechnicianDetailPage() {
                       <TableHead>Job Title</TableHead>
                       <TableHead>Customer</TableHead>
                       <TableHead>Source</TableHead>
-                      <TableHead>Notes</TableHead>
-                    </TableRow>
+                        <TableHead>Notes</TableHead>
+                        <TableHead>Image</TableHead>
+                      </TableRow>
                   </TableHeader>
                   <TableBody>
                     {visibleHistory.map((job) => (
@@ -803,6 +870,18 @@ export default function TechnicianDetailPage() {
                           <span className="text-sm text-muted-foreground line-clamp-2">
                             {job.notes || '—'}
                           </span>
+                        </TableCell>
+                        <TableCell>
+                          {job.photoUrl ? (
+                            <button
+                              type="button"
+                              onClick={() => setPhotoModalUrl(job.photoUrl)}
+                              className="block overflow-hidden rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              aria-label={`View photo for ${job.title}`}
+                            >
+                              <img src={job.photoUrl} alt="Completed work" className="size-10 rounded-md object-cover" />
+                            </button>
+                          ) : '—'}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -853,6 +932,26 @@ export default function TechnicianDetailPage() {
                   rows={4}
                 />
               </div>
+              <div className="space-y-2">
+                <input ref={photoInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoChange} className="sr-only" />
+                {photoPreviewUrl ? (
+                  <div className="relative overflow-hidden rounded-lg border border-border">
+                    <img src={photoPreviewUrl} alt="Selected completed work" className="max-h-56 w-full object-cover" />
+                    <Button type="button" variant="secondary" size="sm" onClick={clearSelectedPhoto} className="absolute right-2 top-2">
+                      Remove
+                    </Button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => photoInputRef.current?.click()}
+                    className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-input px-4 py-8 text-center text-muted-foreground transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <Camera className="size-6" />
+                    <span className="text-sm">Tap to add a photo of the completed work</span>
+                  </button>
+                )}
+              </div>
               <div className="flex gap-2 justify-end">
                 <Button
                   type="button"
@@ -861,16 +960,28 @@ export default function TechnicianDetailPage() {
                     setCompleteDialogOpen(false)
                     setJobToComplete(null)
                     setFeedbackNotes('')
+                    clearSelectedPhoto()
                   }}
                 >
                   Cancel
                 </Button>
-                <Button type="button" onClick={handleConfirmComplete} className="gap-2">
-                  <CheckCircle2 className="size-4" />
-                  Complete
+                <Button type="button" onClick={handleConfirmComplete} className="gap-2" disabled={isCompleting}>
+                  {isCompleting ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
+                  {isCompleting ? 'Uploading...' : 'Complete'}
                 </Button>
               </div>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={!!photoModalUrl} onOpenChange={(open) => !open && setPhotoModalUrl(null)}>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>Completed Work Photo</DialogTitle>
+            </DialogHeader>
+            {photoModalUrl && (
+              <img src={photoModalUrl} alt="Full-size completed work" className="max-h-[70vh] w-full rounded-lg object-contain" />
+            )}
           </DialogContent>
         </Dialog>
 

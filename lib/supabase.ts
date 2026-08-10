@@ -112,6 +112,7 @@ export type ServiceHistory = {
   service_end_date?: string
   status: string
   notes: string
+  photo_url: string | null
   price: number | null
   source?: 'manual' | 'service_alert'
   created_at: string
@@ -125,6 +126,7 @@ export type TechnicianJob = {
   contract_id: string | null
   title: string
   notes: string | null
+  photo_url: string | null
   assigned_date: string
   due_date: string | null
   status: 'pending' | 'completed'
