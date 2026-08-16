@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { supabase, type Quotation, type CompanyProfile } from "@/lib/supabase"
 import { useAuth } from "@/lib/auth-context"
+import { usePlanLimits } from "@/lib/hooks/use-plan-limits"
 import {
   ArrowLeft,
   Download,
@@ -93,6 +94,9 @@ export default function ViewQuotationPage() {
   const id = params.id as string
 
   const [currentOrgId, setCurrentOrgId] = useState<string | null>(null)
+  const [subscriptionAlertOpen, setSubscriptionAlertOpen] = useState(false)
+
+  const { status, planName } = usePlanLimits(currentOrgId)
 
   useEffect(() => {
     if (user?.id) {
@@ -184,6 +188,14 @@ export default function ViewQuotationPage() {
       console.error(err)
       return "INV-001"
     }
+  }
+
+  const handleEditClick = () => {
+    if (status === 'expired' || status === 'cancelled') {
+      setSubscriptionAlertOpen(true)
+      return
+    }
+    router.push(`/quotations/${id}/edit`)
   }
 
   const handleOpenConvertModal = async () => {
@@ -774,12 +786,10 @@ export default function ViewQuotationPage() {
                 Convert to Invoice
               </Button>
             )}
-            <Link href={`/quotations/${id}/edit`}>
-              <Button variant="outline" size="sm">
-                <Edit className="mr-1.5 size-4" />
-                Edit
-              </Button>
-            </Link>
+            <Button variant="outline" size="sm" onClick={handleEditClick}>
+              <Edit className="mr-1.5 size-4" />
+              Edit
+            </Button>
           </div>
         </div>
 
@@ -1082,7 +1092,22 @@ export default function ViewQuotationPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Subscription Alert Modal */}
+      <Dialog open={subscriptionAlertOpen} onOpenChange={setSubscriptionAlertOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Subscription Alert</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Your {planName || 'current'} plan has expired. Renew your plan to edit this quotation.
+          </p>
+          <DialogFooter>
+            <Button onClick={() => setSubscriptionAlertOpen(false)}>
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   )
 }
-
