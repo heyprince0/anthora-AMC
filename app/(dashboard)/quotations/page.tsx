@@ -52,6 +52,7 @@ export default function QuotationsPage() {
   const [deleting, setDeleting] = useState(false)
   const [profileSetupDialogOpen, setProfileSetupDialogOpen] = useState(false)
   const [checkingProfile, setCheckingProfile] = useState(false)
+  const [subscriptionAlertOpen, setSubscriptionAlertOpen] = useState(false)
 
   const [currentOrgId, setCurrentOrgId] = useState<string | null>(null)
 
@@ -215,6 +216,14 @@ export default function QuotationsPage() {
     }
   }
 
+  const handleEditClick = (quotation: Quotation) => {
+    if (status === 'expired' || status === 'cancelled') {
+      setSubscriptionAlertOpen(true)
+      return
+    }
+    router.push(`/quotations/${quotation.id}/edit`)
+  }
+
   const handleUpgrade = () => {
     window.location.href = '/billing'
   }
@@ -304,12 +313,15 @@ export default function QuotationsPage() {
                                 <span className="sr-only">View</span>
                               </Button>
                             </Link>
-                            <Link href={`/quotations/${quotation.id}/edit`}>
-                              <Button variant="ghost" size="sm" title="Edit Quotation">
-                                <Edit className="size-4" />
-                                <span className="sr-only">Edit</span>
-                              </Button>
-                            </Link>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              title="Edit Quotation"
+                              onClick={() => handleEditClick(quotation)}
+                            >
+                              <Edit className="size-4" />
+                              <span className="sr-only">Edit</span>
+                            </Button>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -369,6 +381,23 @@ export default function QuotationsPage() {
             <Button onClick={() => router.push("/settings")}>
               <Settings className="mr-2 size-4" />
               Go to Settings
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Subscription Alert Modal */}
+      <Dialog open={subscriptionAlertOpen} onOpenChange={setSubscriptionAlertOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Subscription Alert</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Your {planName || 'current'} plan has expired. Renew your plan to edit this quotation.
+          </p>
+          <DialogFooter>
+            <Button onClick={() => setSubscriptionAlertOpen(false)}>
+              OK
             </Button>
           </DialogFooter>
         </DialogContent>
