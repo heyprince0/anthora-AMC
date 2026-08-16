@@ -96,7 +96,7 @@ export default function ViewQuotationPage() {
   const [currentOrgId, setCurrentOrgId] = useState<string | null>(null)
   const [subscriptionAlertOpen, setSubscriptionAlertOpen] = useState(false)
 
-  const { status, planName } = usePlanLimits(currentOrgId)
+  const { status, planName, isLoading: limitsLoading } = usePlanLimits(currentOrgId)
 
   useEffect(() => {
     if (user?.id) {
@@ -191,6 +191,10 @@ export default function ViewQuotationPage() {
   }
 
   const handleEditClick = () => {
+    if (limitsLoading) {
+      toast.error("Checking your plan status, please try again in a moment...")
+      return
+    }
     if (status === 'expired' || status === 'cancelled') {
       setSubscriptionAlertOpen(true)
       return
