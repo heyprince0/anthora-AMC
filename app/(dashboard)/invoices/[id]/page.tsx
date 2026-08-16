@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { supabase, type Invoice, type CompanyProfile } from "@/lib/supabase"
 import { useAuth } from "@/lib/auth-context"
+import { usePlanLimits } from "@/lib/hooks/use-plan-limits"
 import {
   ArrowLeft,
   Download,
@@ -107,6 +108,9 @@ export default function ViewInvoicePage() {
   const id = params.id as string
 
   const [currentOrgId, setCurrentOrgId] = useState<string | null>(null)
+  const [subscriptionAlertOpen, setSubscriptionAlertOpen] = useState(false)
+
+  const { status, planName } = usePlanLimits(currentOrgId)
 
   useEffect(() => {
     if (user?.id) {
@@ -198,6 +202,14 @@ export default function ViewInvoicePage() {
     } finally {
       setUpdating(false)
     }
+  }
+
+  const handleEditClick = () => {
+    if (status === 'expired' || status === 'cancelled') {
+      setSubscriptionAlertOpen(true)
+      return
+    }
+    router.push(`/invoices/${id}/edit`)
   }
 
   const handleOpenEditModal = () => {
@@ -839,15 +851,14 @@ export default function ViewInvoicePage() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Link href={`/invoices/${id}/edit`}>
-              <Button
-                variant="outline"
-                size="sm"
-              >
-                <Edit className="mr-1.5 size-4" />
-                Edit
-              </Button>
-            </Link>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleEditClick}
+            >
+              <Edit className="mr-1.5 size-4" />
+              Edit
+            </Button>
           </div>
         </div>
 
@@ -1224,7 +1235,22 @@ export default function ViewInvoicePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Subscription Alert Modal */}
+      <Dialog open={subscriptionAlertOpen} onOpenChange={setSubscriptionAlertOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Subscription Alert</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Your {planName || 'current'} plan has expired. Renew your plan to edit this invoice.
+          </p>
+          <DialogFooter>
+            <Button onClick={() => setSubscriptionAlertOpen(false)}>
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   )
 }
-
