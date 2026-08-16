@@ -44,7 +44,7 @@ import { supabase, type Invoice } from "@/lib/supabase"
 import { useAuth } from "@/lib/auth-context"
 import { usePlanLimits } from "@/lib/hooks/use-plan-limits"
 import LimitReachedModal from "@/components/billing/limit-reached-modal"
-import { Plus, Search, Eye, Trash2, Settings, Bell } from "lucide-react"
+import { Plus, Search, Eye, Trash2, Settings } from "lucide-react"
 import Link from "next/link"
 import { toast } from "sonner"
 
@@ -72,8 +72,6 @@ export default function InvoicesPage() {
   const [deleting, setDeleting] = useState(false)
   const [profileSetupDialogOpen, setProfileSetupDialogOpen] = useState(false)
   const [checkingProfile, setCheckingProfile] = useState(false)
-  const [subscriptionAlertOpen, setSubscriptionAlertOpen] = useState(false)
-  const [subscriptionAlertInvoice, setSubscriptionAlertInvoice] = useState<Invoice | null>(null)
 
   const [currentOrgId, setCurrentOrgId] = useState<string | null>(null)
 
@@ -358,17 +356,6 @@ export default function InvoicesPage() {
                               variant="ghost"
                               size="sm"
                               onClick={() => {
-                                setSubscriptionAlertInvoice(invoice)
-                                setSubscriptionAlertOpen(true)
-                              }}
-                            >
-                              <Bell className="size-4 text-yellow-600" />
-                              <span className="sr-only">Subscription Alert</span>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
                                 setInvoiceToDelete(invoice)
                                 setDeleteDialogOpen(true)
                               }}
@@ -436,23 +423,6 @@ export default function InvoicesPage() {
             <Button onClick={() => router.push("/settings")}>
               <Settings className="mr-2 size-4" />
               Go to Settings
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      <Dialog open={subscriptionAlertOpen} onOpenChange={setSubscriptionAlertOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Subscription Alert</DialogTitle>
-            <DialogDescription>
-              {status === 'expired' || status === 'cancelled'
-                ? `Your ${planName || 'current'} plan has expired. Renew your plan to keep creating and managing invoices without interruption.`
-                : `Your ${planName || 'current'} plan is active. Keep an eye on your plan status so your invoicing stays uninterrupted.`}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button onClick={() => setSubscriptionAlertOpen(false)}>
-              OK
             </Button>
           </DialogFooter>
         </DialogContent>
