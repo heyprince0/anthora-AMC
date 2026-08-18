@@ -291,8 +291,8 @@ export default function ItemsTable({
           </div>
         </div>
 
-        {/* Table */}
-        <div className="border rounded-lg overflow-hidden">
+        {/* Desktop / tablet table view - unchanged */}
+        <div className="hidden md:block border rounded-lg overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
@@ -384,6 +384,92 @@ export default function ItemsTable({
               )}
             </TableBody>
           </Table>
+        </div>
+
+        {/* Mobile card view - compact, same data as the table above */}
+        <div className="flex flex-col gap-2.5 md:hidden">
+          {loading ? (
+            <div className="text-center py-8 text-muted-foreground">Loading inventory items...</div>
+          ) : filteredItems.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              {searchTerm || filterStatus !== "all" || filterCategory !== "all" || filterLocation !== "all"
+                ? "No items found matching filters"
+                : "No inventory items yet"}
+            </div>
+          ) : (
+            filteredItems.map((item) => {
+              const stockStatus = getStockStatus(item.current_stock, item.min_stock_level)
+              const category = categories.find((c) => c.id === item.category_id)
+              const itemValue = item.current_stock * item.purchase_price
+
+              return (
+                <div key={item.id} className="rounded-lg border bg-card p-3 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{item.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {item.sku || "—"}{item.brand ? ` · ${item.brand}` : ""}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Badge className={`${stockStatus.color}`}>{stockStatus.status}</Badge>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="size-8">
+                            <MoreHorizontal className="size-4" />
+                            <span className="sr-only">Actions</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => onEditItem(item)}>
+                            <Edit className="mr-2 size-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleStockClick(item, "in")}>
+                            <ArrowUp className="mr-2 size-4" />
+                            Stock In
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleStockClick(item, "out")}>
+                            <ArrowDown className="mr-2 size-4" />
+                            Stock Out
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleHistoryClick(item)}>
+                            <History className="mr-2 size-4" />
+                            History
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setItemToDelete(item)
+                              setDeleteDialogOpen(true)
+                            }}
+                            className="text-red-600"
+                          >
+                            <Trash2 className="mr-2 size-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+
+                  <div className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+                    <div className="min-w-0">
+                      <span className="text-muted-foreground">Category: </span>
+                      <span className="font-medium">{category?.name || "—"}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-muted-foreground">Stock: </span>
+                      <span className="font-medium">{item.current_stock} {item.unit}</span>
+                    </div>
+                    <div className="col-span-2 min-w-0">
+                      <span className="text-muted-foreground">Value: </span>
+                      <span className="font-medium">{formatINR(itemValue)}</span>
+                    </div>
+                  </div>
+                </div>
+              )
+            })
+          )}
         </div>
 
         {/* Stock In/Out Dialog */}
