@@ -674,82 +674,169 @@ export default function ContractsPage() {
             ) : filteredContracts.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">No contracts found</div>
             ) : (
-              <div className="w-full min-w-0 overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Contract Name</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Frequency</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Contract End</TableHead>
-                      <TableHead>Last Service</TableHead>
-                      <TableHead>Next Service</TableHead>
-                      <TableHead>Status</TableHead>
-                      {/* Hide Actions column for technicians */}
-                      {!isTechnician && <TableHead className="w-[70px]">Actions</TableHead>}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredContracts.map((contract) => {
-                      const days = getDaysUntilService(contract.next_service_date)
-                      const frequencyMonths = Math.round(contract.frequency_days / 30)
-                      return (
-                        <TableRow key={contract.id}>
-                          <TableCell className="font-medium">{contract.contract_name}</TableCell>
-                          <TableCell>{contract.customerName}</TableCell>
-                          <TableCell>{frequencyMonths} months</TableCell>
-                          <TableCell>
-                            {contract.contracts_price != null
-                              ? `₹${contract.contracts_price.toLocaleString('en-IN')}`
-                              : '—'}
-                          </TableCell>
-                          <TableCell>{contract.endDate || '—'}</TableCell>
-                          <TableCell>{contract.start_date || '—'}</TableCell>
-                          <TableCell>{contract.next_service_date || '—'}</TableCell>
-                          <TableCell>{getStatusBadge(days, contract.status)}</TableCell>
-                          {/* Hide Actions cell for technicians */}
-                          {!isTechnician && (
+              <>
+                {/* Desktop / tablet table view - unchanged */}
+                <div className="hidden md:block w-full min-w-0 overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Contract Name</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Frequency</TableHead>
+                        <TableHead>Price</TableHead>
+                        <TableHead>Contract End</TableHead>
+                        <TableHead>Last Service</TableHead>
+                        <TableHead>Next Service</TableHead>
+                        <TableHead>Status</TableHead>
+                        {/* Hide Actions column for technicians */}
+                        {!isTechnician && <TableHead className="w-[70px]">Actions</TableHead>}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredContracts.map((contract) => {
+                        const days = getDaysUntilService(contract.next_service_date)
+                        const frequencyMonths = Math.round(contract.frequency_days / 30)
+                        return (
+                          <TableRow key={contract.id}>
+                            <TableCell className="font-medium">{contract.contract_name}</TableCell>
+                            <TableCell>{contract.customerName}</TableCell>
+                            <TableCell>{frequencyMonths} months</TableCell>
                             <TableCell>
-                              <div className="flex gap-2">
-                                <Link href={`/contracts/${contract.id}`}>
+                              {contract.contracts_price != null
+                                ? `₹${contract.contracts_price.toLocaleString('en-IN')}`
+                                : '—'}
+                            </TableCell>
+                            <TableCell>{contract.endDate || '—'}</TableCell>
+                            <TableCell>{contract.start_date || '—'}</TableCell>
+                            <TableCell>{contract.next_service_date || '—'}</TableCell>
+                            <TableCell>{getStatusBadge(days, contract.status)}</TableCell>
+                            {/* Hide Actions cell for technicians */}
+                            {!isTechnician && (
+                              <TableCell>
+                                <div className="flex gap-2">
+                                  <Link href={`/contracts/${contract.id}`}>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      title="View Contract Details"
+                                    >
+                                      <Eye className="size-4" />
+                                      <span className="sr-only">View</span>
+                                    </Button>
+                                  </Link>
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    title="View Contract Details"
+                                    onClick={() => handleEditClick(contract)}
+                                    title="Edit Contract"
                                   >
-                                    <Eye className="size-4" />
-                                    <span className="sr-only">View</span>
+                                    <Edit className="size-4" />
+                                    <span className="sr-only">Edit</span>
                                   </Button>
-                                </Link>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleEditClick(contract)}
-                                  title="Edit Contract"
-                                >
-                                  <Edit className="size-4" />
-                                  <span className="sr-only">Edit</span>
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => { setContractToDelete(contract); setDeleteDialogOpen(true) }}
-                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                  title="Delete Contract"
-                                >
-                                  <Trash2 className="size-4" />
-                                  <span className="sr-only">Delete</span>
-                                </Button>
-                              </div>
-                            </TableCell>
-                          )}
-                        </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => { setContractToDelete(contract); setDeleteDialogOpen(true) }}
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    title="Delete Contract"
+                                  >
+                                    <Trash2 className="size-4" />
+                                    <span className="sr-only">Delete</span>
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            )}
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Mobile card view - compact, same data as the table above */}
+                <div className="flex flex-col gap-2.5 md:hidden">
+                  {filteredContracts.map((contract) => {
+                    const days = getDaysUntilService(contract.next_service_date)
+                    const frequencyMonths = Math.round(contract.frequency_days / 30)
+                    return (
+                      <div
+                        key={contract.id}
+                        className="rounded-lg border bg-card p-3 min-w-0"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{contract.contract_name}</p>
+                            <p className="text-xs text-muted-foreground truncate">{contract.customerName}</p>
+                          </div>
+                          <div className="shrink-0">{getStatusBadge(days, contract.status)}</div>
+                        </div>
+
+                        <div className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+                          <div className="min-w-0">
+                            <span className="text-muted-foreground">Frequency: </span>
+                            <span className="font-medium">{frequencyMonths} months</span>
+                          </div>
+                          <div className="min-w-0">
+                            <span className="text-muted-foreground">Price: </span>
+                            <span className="font-medium">
+                              {contract.contracts_price != null
+                                ? `₹${contract.contracts_price.toLocaleString('en-IN')}`
+                                : '—'}
+                            </span>
+                          </div>
+                          <div className="min-w-0">
+                            <span className="text-muted-foreground">Last Service: </span>
+                            <span className="font-medium">{contract.start_date || '—'}</span>
+                          </div>
+                          <div className="min-w-0">
+                            <span className="text-muted-foreground">Next Service: </span>
+                            <span className="font-medium">{contract.next_service_date || '—'}</span>
+                          </div>
+                          <div className="col-span-2 min-w-0">
+                            <span className="text-muted-foreground">Contract End: </span>
+                            <span className="font-medium">{contract.endDate || '—'}</span>
+                          </div>
+                        </div>
+
+                        {/* Hide Actions row for technicians */}
+                        {!isTechnician && (
+                          <div className="mt-2.5 flex items-center justify-end gap-1 border-t pt-2">
+                            <Link href={`/contracts/${contract.id}`}>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                title="View Contract Details"
+                              >
+                                <Eye className="size-4" />
+                                <span className="sr-only">View</span>
+                              </Button>
+                            </Link>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditClick(contract)}
+                              title="Edit Contract"
+                            >
+                              <Edit className="size-4" />
+                              <span className="sr-only">Edit</span>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => { setContractToDelete(contract); setDeleteDialogOpen(true) }}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              title="Delete Contract"
+                            >
+                              <Trash2 className="size-4" />
+                              <span className="sr-only">Delete</span>
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
