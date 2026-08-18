@@ -161,8 +161,8 @@ export default function SuppliersTab({ orgId }: SuppliersTabProps) {
           </Button>
         </div>
 
-        {/* Table */}
-        <div className="border rounded-lg overflow-hidden">
+        {/* Desktop / tablet table view - unchanged */}
+        <div className="hidden md:block border rounded-lg overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
@@ -226,6 +226,77 @@ export default function SuppliersTab({ orgId }: SuppliersTabProps) {
               )}
             </TableBody>
           </Table>
+        </div>
+
+        {/* Mobile card view - individual cards, same style as Customers page */}
+        <div className="grid gap-4 sm:grid-cols-2 md:hidden">
+          {loading ? (
+            <div className="text-center py-8 col-span-full text-muted-foreground">Loading suppliers...</div>
+          ) : filteredSuppliers.length === 0 ? (
+            <div className="text-center py-8 col-span-full text-muted-foreground">
+              {searchTerm ? "No suppliers found matching your search" : "No suppliers yet"}
+            </div>
+          ) : (
+            filteredSuppliers.map((supplier) => (
+              <Card key={supplier.id} className="relative">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 shrink-0">
+                        <span className="text-base font-semibold text-primary">
+                          {supplier.name.charAt(0)}
+                        </span>
+                      </div>
+                      <div className="min-w-0">
+                        <CardTitle className="text-sm truncate">{supplier.name}</CardTitle>
+                        <CardDescription className="text-xs truncate">{supplier.contact_person || "—"}</CardDescription>
+                      </div>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="size-8 shrink-0">
+                          <MoreHorizontal className="size-4" />
+                          <span className="sr-only">Actions</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleEditSupplier(supplier)}>
+                          <Edit className="mr-2 size-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setSupplierToDelete(supplier)
+                            setDeleteDialogOpen(true)
+                          }}
+                          className="text-red-600"
+                        >
+                          <Trash2 className="mr-2 size-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+                    <div className="min-w-0">
+                      <span className="text-muted-foreground">Phone: </span>
+                      <span className="font-medium">{supplier.phone || "—"}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-muted-foreground">GSTIN: </span>
+                      <span className="font-medium">{supplier.gstin || "—"}</span>
+                    </div>
+                    <div className="col-span-2 min-w-0">
+                      <span className="text-muted-foreground">Address: </span>
+                      <span className="font-medium">{supplier.address || "—"}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
         </div>
 
         {/* Add/Edit Supplier Sheet */}
