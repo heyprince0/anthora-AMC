@@ -281,64 +281,120 @@ export default function QuotationsPage() {
                 {quotations.length === 0 ? "No quotations yet. Create your first quotation!" : "No quotations matching your filters"}
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Quote No</TableHead>
-                      <TableHead>Client Name</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Grand Total</TableHead>
-                      <TableHead className="w-[80px]">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredQuotations.map((quotation) => (
-                      <TableRow key={quotation.id}>
-                        <TableCell className="font-medium">{quotation.quote_no}</TableCell>
-                        <TableCell>{quotation.client_name}</TableCell>
-                        <TableCell>
+              <>
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Quote No</TableHead>
+                        <TableHead>Client Name</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Grand Total</TableHead>
+                        <TableHead className="w-[80px]">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredQuotations.map((quotation) => (
+                        <TableRow key={quotation.id}>
+                          <TableCell className="font-medium">{quotation.quote_no}</TableCell>
+                          <TableCell>{quotation.client_name}</TableCell>
+                          <TableCell>
+                            {new Date(quotation.created_at).toLocaleDateString("en-IN", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </TableCell>
+                          <TableCell>{formatCurrency(quotation.grand_total)}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Link href={`/quotations/${quotation.id}`}>
+                                <Button variant="ghost" size="sm" title="View Quotation">
+                                  <Eye className="size-4" />
+                                  <span className="sr-only">View</span>
+                                </Button>
+                              </Link>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                title="Edit Quotation"
+                                onClick={() => handleEditClick(quotation)}
+                              >
+                                <Edit className="size-4" />
+                                <span className="sr-only">Edit</span>
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => { setQuotationToDelete(quotation); setDeleteDialogOpen(true) }}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                title="Delete Quotation"
+                              >
+                                <Trash2 className="size-4" />
+                                <span className="sr-only">Delete</span>
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Mobile card view - compact, same data as the table above */}
+                <div className="flex flex-col gap-2.5 md:hidden">
+                  {filteredQuotations.map((quotation) => (
+                    <div key={quotation.id} className="rounded-lg border bg-card p-3 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{quotation.quote_no}</p>
+                          <p className="text-xs text-muted-foreground truncate">{quotation.client_name}</p>
+                        </div>
+                        <p className="text-xs text-muted-foreground shrink-0">
                           {new Date(quotation.created_at).toLocaleDateString("en-IN", {
                             day: "2-digit",
                             month: "short",
                             year: "numeric",
                           })}
-                        </TableCell>
-                        <TableCell>{formatCurrency(quotation.grand_total)}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Link href={`/quotations/${quotation.id}`}>
-                              <Button variant="ghost" size="sm" title="View Quotation">
-                                <Eye className="size-4" />
-                                <span className="sr-only">View</span>
-                              </Button>
-                            </Link>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              title="Edit Quotation"
-                              onClick={() => handleEditClick(quotation)}
-                            >
-                              <Edit className="size-4" />
-                              <span className="sr-only">Edit</span>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => { setQuotationToDelete(quotation); setDeleteDialogOpen(true) }}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                              title="Delete Quotation"
-                            >
-                              <Trash2 className="size-4" />
-                              <span className="sr-only">Delete</span>
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                        </p>
+                      </div>
+
+                      <div className="mt-2.5 text-xs">
+                        <span className="text-muted-foreground">Grand Total: </span>
+                        <span className="font-medium">{formatCurrency(quotation.grand_total)}</span>
+                      </div>
+
+                      <div className="mt-2.5 flex items-center justify-end gap-1 border-t pt-2">
+                        <Link href={`/quotations/${quotation.id}`}>
+                          <Button variant="ghost" size="sm" title="View Quotation">
+                            <Eye className="size-4" />
+                            <span className="sr-only">View</span>
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="Edit Quotation"
+                          onClick={() => handleEditClick(quotation)}
+                        >
+                          <Edit className="size-4" />
+                          <span className="sr-only">Edit</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => { setQuotationToDelete(quotation); setDeleteDialogOpen(true) }}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          title="Delete Quotation"
+                        >
+                          <Trash2 className="size-4" />
+                          <span className="sr-only">Delete</span>
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
