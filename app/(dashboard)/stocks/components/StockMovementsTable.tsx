@@ -214,8 +214,8 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
           </div>
         </div>
 
-        {/* Table */}
-        <div className="border rounded-lg overflow-hidden">
+        {/* Desktop / tablet table view - unchanged */}
+        <div className="hidden md:block border rounded-lg overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
@@ -277,6 +277,66 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
               )}
             </TableBody>
           </Table>
+        </div>
+
+        {/* Mobile card view - compact, same data as the table above */}
+        <div className="flex flex-col gap-2.5 md:hidden">
+          {loading ? (
+            <div className="text-center py-8 text-muted-foreground">Loading stock movements...</div>
+          ) : filteredMovements.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              {searchTerm || filterType !== "all" || filterReason !== "all"
+                ? "No movements found matching filters"
+                : "No stock movements recorded"}
+            </div>
+          ) : (
+            filteredMovements.map((movement) => (
+              <div key={movement.id} className="rounded-lg border bg-card p-3 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{getItemName(movement.item_id)}</p>
+                    <p className="text-xs text-muted-foreground truncate">{formatDate(movement.created_at)}</p>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Badge
+                      className={
+                        movement.movement_type === "in"
+                          ? "bg-green-500/10 text-green-600 border-green-500/20"
+                          : "bg-red-500/10 text-red-600 border-red-500/20"
+                      }
+                    >
+                      {movement.movement_type === "in" ? "In" : "Out"}
+                    </Badge>
+                    <span className="text-sm font-medium whitespace-nowrap">
+                      {movement.movement_type === "in" ? "+" : "-"}
+                      {movement.quantity}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+                  <div className="min-w-0">
+                    <span className="text-muted-foreground">Reason: </span>
+                    <span className="font-medium">{movement.reason}</span>
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-muted-foreground">Technician: </span>
+                    <span className="font-medium">{getTechnicianName(movement.technician_id)}</span>
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-muted-foreground">Supplier: </span>
+                    <span className="font-medium">{getSupplierName(movement.supplier_id)}</span>
+                  </div>
+                  {movement.notes && (
+                    <div className="col-span-2 min-w-0">
+                      <span className="text-muted-foreground">Notes: </span>
+                      <span className="font-medium">{movement.notes}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </CardContent>
     </Card>
