@@ -407,11 +407,6 @@ export default function ItemsTable({
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 shrink-0">
-                          <span className="text-base font-semibold text-primary">
-                            {item.name.charAt(0)}
-                          </span>
-                        </div>
                         <div className="min-w-0">
                           <CardTitle className="text-sm truncate">{item.name}</CardTitle>
                           <CardDescription className="text-xs truncate">
