@@ -322,54 +322,106 @@ export default function InvoicesPage() {
                 )}
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Invoice No</TableHead>
-                      <TableHead>Client Name</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Valid Till</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Payment Status</TableHead>
-                      <TableHead className="w-[80px]">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredInvoices.map((invoice) => (
-                      <TableRow key={invoice.id}>
-                        <TableCell className="font-medium">{invoice.invoice_no}</TableCell>
-                        <TableCell>{invoice.client_name}</TableCell>
-                        <TableCell>{formatDate(invoice.invoice_date)}</TableCell>
-                        <TableCell>{formatDate(invoice.due_date)}</TableCell>
-                        <TableCell>{formatCurrency(invoice.grand_total)}</TableCell>
-                        <TableCell>{getPaymentStatusBadge(invoice.payment_status)}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Link href={`/invoices/${invoice.id}`}>
-                              <Button variant="ghost" size="sm">
-                                <Eye className="size-4" />
-                                <span className="sr-only">View</span>
-                              </Button>
-                            </Link>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setInvoiceToDelete(invoice)
-                                setDeleteDialogOpen(true)
-                              }}
-                            >
-                              <Trash2 className="size-4 text-red-600" />
-                              <span className="sr-only">Delete</span>
-                            </Button>
-                          </div>
-                        </TableCell>
+              <>
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Invoice No</TableHead>
+                        <TableHead>Client Name</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Valid Till</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Payment Status</TableHead>
+                        <TableHead className="w-[80px]">Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredInvoices.map((invoice) => (
+                        <TableRow key={invoice.id}>
+                          <TableCell className="font-medium">{invoice.invoice_no}</TableCell>
+                          <TableCell>{invoice.client_name}</TableCell>
+                          <TableCell>{formatDate(invoice.invoice_date)}</TableCell>
+                          <TableCell>{formatDate(invoice.due_date)}</TableCell>
+                          <TableCell>{formatCurrency(invoice.grand_total)}</TableCell>
+                          <TableCell>{getPaymentStatusBadge(invoice.payment_status)}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Link href={`/invoices/${invoice.id}`}>
+                                <Button variant="ghost" size="sm">
+                                  <Eye className="size-4" />
+                                  <span className="sr-only">View</span>
+                                </Button>
+                              </Link>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setInvoiceToDelete(invoice)
+                                  setDeleteDialogOpen(true)
+                                }}
+                              >
+                                <Trash2 className="size-4 text-red-600" />
+                                <span className="sr-only">Delete</span>
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Mobile card view - compact, same data as the table above */}
+                <div className="flex flex-col gap-2.5 md:hidden">
+                  {filteredInvoices.map((invoice) => (
+                    <div key={invoice.id} className="rounded-lg border bg-card p-3 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{invoice.invoice_no}</p>
+                          <p className="text-xs text-muted-foreground truncate">{invoice.client_name}</p>
+                        </div>
+                        <div className="shrink-0">{getPaymentStatusBadge(invoice.payment_status)}</div>
+                      </div>
+
+                      <div className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+                        <div className="min-w-0">
+                          <span className="text-muted-foreground">Date: </span>
+                          <span className="font-medium">{formatDate(invoice.invoice_date)}</span>
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-muted-foreground">Valid Till: </span>
+                          <span className="font-medium">{formatDate(invoice.due_date)}</span>
+                        </div>
+                        <div className="col-span-2 min-w-0">
+                          <span className="text-muted-foreground">Amount: </span>
+                          <span className="font-medium">{formatCurrency(invoice.grand_total)}</span>
+                        </div>
+                      </div>
+
+                      <div className="mt-2.5 flex items-center justify-end gap-1 border-t pt-2">
+                        <Link href={`/invoices/${invoice.id}`}>
+                          <Button variant="ghost" size="sm">
+                            <Eye className="size-4" />
+                            <span className="sr-only">View</span>
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setInvoiceToDelete(invoice)
+                            setDeleteDialogOpen(true)
+                          }}
+                        >
+                          <Trash2 className="size-4 text-red-600" />
+                          <span className="sr-only">Delete</span>
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
