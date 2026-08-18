@@ -94,6 +94,13 @@ function getFilterStatusValue(days: number, status: string): string {
   return status
 }
 
+function formatShortDate(dateStr: string | null): string {
+  if (!dateStr) return '—'
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return dateStr
+  return d.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })
+}
+
 function hexToRgb(hex: string): [number, number, number] {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
   return result
@@ -786,11 +793,11 @@ export default function ContractsPage() {
                           </div>
                           <div className="min-w-0">
                             <span className="text-muted-foreground">Last Service: </span>
-                            <span className="font-medium">{contract.start_date || '—'}</span>
+                            <span className="font-medium">{formatShortDate(contract.start_date)}</span>
                           </div>
                           <div className="min-w-0">
                             <span className="text-muted-foreground">Next Service: </span>
-                            <span className="font-medium">{contract.next_service_date || '—'}</span>
+                            <span className="font-medium">{formatShortDate(contract.next_service_date)}</span>
                           </div>
                           <div className="col-span-2 min-w-0">
                             <span className="text-muted-foreground">Contract End: </span>
