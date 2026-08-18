@@ -181,8 +181,8 @@ export default function CategoriesTab({ orgId }: CategoriesTabProps) {
           </Button>
         </div>
 
-        {/* Table */}
-        <div className="border rounded-lg overflow-hidden">
+        {/* Desktop / tablet table view - unchanged */}
+        <div className="hidden md:block border rounded-lg overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
@@ -244,6 +244,63 @@ export default function CategoriesTab({ orgId }: CategoriesTabProps) {
               )}
             </TableBody>
           </Table>
+        </div>
+
+        {/* Mobile card view - individual cards, same style as Customers page */}
+        <div className="grid gap-4 sm:grid-cols-2 md:hidden">
+          {loading ? (
+            <div className="text-center py-8 col-span-full text-muted-foreground">Loading categories...</div>
+          ) : filteredCategories.length === 0 ? (
+            <div className="text-center py-8 col-span-full text-muted-foreground">
+              {searchTerm ? "No categories found matching your search" : "No categories yet"}
+            </div>
+          ) : (
+            filteredCategories.map((category) => (
+              <Card key={category.id} className="relative">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 shrink-0">
+                        <span className="text-base font-semibold text-primary">
+                          {category.name.charAt(0)}
+                        </span>
+                      </div>
+                      <div className="min-w-0">
+                        <CardTitle className="text-sm truncate">{category.name}</CardTitle>
+                        <CardDescription className="text-xs truncate">
+                          {category.itemCount} items · {new Date(category.created_at).toLocaleDateString("en-IN")}
+                        </CardDescription>
+                      </div>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="size-8 shrink-0">
+                          <MoreHorizontal className="size-4" />
+                          <span className="sr-only">Actions</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleEditCategory(category)}>
+                          <Edit className="mr-2 size-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setCategoryToDelete(category)
+                            setDeleteDialogOpen(true)
+                          }}
+                          className="text-red-600"
+                        >
+                          <Trash2 className="mr-2 size-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </CardHeader>
+              </Card>
+            ))
+          )}
         </div>
 
         {/* Add/Edit Category Sheet */}
