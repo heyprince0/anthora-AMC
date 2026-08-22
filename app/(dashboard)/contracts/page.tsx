@@ -826,25 +826,27 @@ export default function ContractsPage() {
                                 <span className="sr-only">View</span>
                               </Button>
                             </Link>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditClick(contract)}
-                              title="Edit Contract"
-                            >
-                              <Edit className="size-4" />
-                              <span className="sr-only">Edit</span>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => { setContractToDelete(contract); setDeleteDialogOpen(true) }}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                              title="Delete Contract"
-                            >
-                              <Trash2 className="size-4" />
-                              <span className="sr-only">Delete</span>
-                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="size-8">
+                                  <MoreHorizontal className="size-4" />
+                                  <span className="sr-only">Actions</span>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleEditClick(contract)}>
+                                  <Edit className="mr-2 size-4" />
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => { setContractToDelete(contract); setDeleteDialogOpen(true) }}
+                                  className="text-red-600"
+                                >
+                                  <Trash2 className="mr-2 size-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         )}
                       </div>
