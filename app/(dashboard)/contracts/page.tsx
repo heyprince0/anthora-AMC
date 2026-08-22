@@ -43,7 +43,13 @@ import {
 } from "@/components/ui/alert-dialog"
 import { supabase, type Contract, type Customer, getDaysUntilService } from "@/lib/supabase"
 import { useAuth } from "@/lib/auth-context"
-import { Plus, Search, Edit, Trash2, Download, Eye, Check, ChevronsUpDown } from "lucide-react"
+import { Plus, Search, Edit, Trash2, Download, Eye, Check, ChevronsUpDown, MoreHorizontal } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { toast } from "sonner"
 import { AddContractModal } from "@/components/add-contract-modal"
 import Link from "next/link"
@@ -720,7 +726,7 @@ export default function ContractsPage() {
                             {/* Hide Actions cell for technicians */}
                             {!isTechnician && (
                               <TableCell>
-                                <div className="flex gap-2">
+                                <div className="flex items-center gap-1">
                                   <Link href={`/contracts/${contract.id}`}>
                                     <Button
                                       variant="ghost"
@@ -731,25 +737,27 @@ export default function ContractsPage() {
                                       <span className="sr-only">View</span>
                                     </Button>
                                   </Link>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleEditClick(contract)}
-                                    title="Edit Contract"
-                                  >
-                                    <Edit className="size-4" />
-                                    <span className="sr-only">Edit</span>
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => { setContractToDelete(contract); setDeleteDialogOpen(true) }}
-                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                    title="Delete Contract"
-                                  >
-                                    <Trash2 className="size-4" />
-                                    <span className="sr-only">Delete</span>
-                                  </Button>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="size-8">
+                                        <MoreHorizontal className="size-4" />
+                                        <span className="sr-only">Actions</span>
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={() => handleEditClick(contract)}>
+                                        <Edit className="mr-2 size-4" />
+                                        Edit
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() => { setContractToDelete(contract); setDeleteDialogOpen(true) }}
+                                        className="text-red-600"
+                                      >
+                                        <Trash2 className="mr-2 size-4" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
                                 </div>
                               </TableCell>
                             )}
