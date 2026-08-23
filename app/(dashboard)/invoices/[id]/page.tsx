@@ -336,11 +336,13 @@ export default function ViewInvoicePage() {
       // ===== PRE-FETCH IMAGES =====
       const headerStyle = profile?.header_style ?? "single_logo"
       let bannerBase64: string | null = null
+      let bannerFormat: "JPEG" | "PNG" = "PNG"
       let bannerH = 0
       if (headerStyle === "thumbnail" && profile?.header_thumbnail_url) {
         try {
           const response = await fetch(profile.header_thumbnail_url)
           const blob = await response.blob()
+          bannerFormat = blob.type.includes('jpeg') || blob.type.includes('jpg') ? 'JPEG' : 'PNG'
           bannerBase64 = await new Promise<string>((resolve) => {
             const reader = new FileReader()
             reader.onloadend = () => resolve(reader.result as string)
@@ -352,10 +354,12 @@ export default function ViewInvoicePage() {
       }
 
       let logoBase64: string | null = null
+      let logoFormat: "JPEG" | "PNG" = "PNG"
       if (headerStyle !== "thumbnail" && profile?.logo_url) {
         try {
           const response = await fetch(profile.logo_url)
           const blob = await response.blob()
+          logoFormat = blob.type.includes('jpeg') || blob.type.includes('jpg') ? 'JPEG' : 'PNG'
           logoBase64 = await new Promise<string>((resolve) => {
             const reader = new FileReader()
             reader.onloadend = () => resolve(reader.result as string)
@@ -404,7 +408,7 @@ export default function ViewInvoicePage() {
         // HEADER
         if (headerStyle === "thumbnail" && bannerBase64) {
           const bannerW = pageW - (margin * 2)
-          doc.addImage(bannerBase64, "PNG", margin, y, bannerW, bannerH)
+          doc.addImage(bannerBase64, bannerFormat, margin, y, bannerW, bannerH)
           y += bannerH +6
         } else if (headerStyle === "single_logo") {
           y = renderSingleLogoHeader(doc, profile, y, logoBase64, pageW, margin, [tr, tg, tb])
@@ -413,7 +417,7 @@ export default function ViewInvoicePage() {
           let logoX = margin
           let logoAdded = false
           if (logoBase64) {
-            doc.addImage(logoBase64, "PNG", logoX, y, 22, 22)
+            doc.addImage(logoBase64, logoFormat, logoX, y, 22, 22)
             logoAdded = true
           }
 
