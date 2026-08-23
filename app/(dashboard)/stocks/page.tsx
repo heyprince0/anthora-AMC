@@ -240,20 +240,20 @@ export default function StocksPage() {
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full justify-start overflow-x-auto sm:w-auto sm:justify-center">
-            <TabsTrigger value="items" className="flex shrink-0 items-center gap-1.5 whitespace-nowrap">
+            <TabsTrigger value="items" className="flex shrink-0 items-center gap-1.5 whitespace-nowrap sm:gap-2 sm:px-4">
               <Package className="size-4" />
               <span>Items</span>
               <span className="text-xs text-muted-foreground">({currentInventoryCount || 0})</span>
             </TabsTrigger>
-            <TabsTrigger value="movements" className="flex shrink-0 items-center gap-1.5 whitespace-nowrap">
+            <TabsTrigger value="movements" className="flex shrink-0 items-center gap-1.5 whitespace-nowrap sm:gap-2 sm:px-4">
               <ArrowLeftRight className="size-4" />
               <span>Stock Movements</span>
             </TabsTrigger>
-            <TabsTrigger value="categories" className="flex shrink-0 items-center gap-1.5 whitespace-nowrap">
+            <TabsTrigger value="categories" className="flex shrink-0 items-center gap-1.5 whitespace-nowrap sm:gap-2 sm:px-4">
               <FolderTree className="size-4" />
               <span>Categories</span>
             </TabsTrigger>
-            <TabsTrigger value="suppliers" className="flex shrink-0 items-center gap-1.5 whitespace-nowrap">
+            <TabsTrigger value="suppliers" className="flex shrink-0 items-center gap-1.5 whitespace-nowrap sm:gap-2 sm:px-4">
               <Truck className="size-4" />
               <span>Suppliers</span>
             </TabsTrigger>
