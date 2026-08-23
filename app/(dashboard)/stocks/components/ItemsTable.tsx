@@ -341,42 +341,56 @@ export default function ItemsTable({
                       </TableCell>
                       <TableCell className="text-right text-sm">{formatINR(itemValue)}</TableCell>
                       <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="size-8">
-                              <MoreHorizontal className="size-4" />
-                              <span className="sr-only">Actions</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => onEditItem(item)}>
-                              <Edit className="mr-2 size-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleStockClick(item, "in")}>
-                              <ArrowUp className="mr-2 size-4" />
-                              Stock In
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleStockClick(item, "out")}>
-                              <ArrowDown className="mr-2 size-4" />
-                              Stock Out
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleHistoryClick(item)}>
-                              <History className="mr-2 size-4" />
-                              History
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setItemToDelete(item)
-                                setDeleteDialogOpen(true)
-                              }}
-                              className="text-red-600"
-                            >
-                              <Trash2 className="mr-2 size-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                            onClick={() => handleStockClick(item, "in")}
+                            title="Stock In"
+                          >
+                            <ArrowUp className="size-4" />
+                            <span className="sr-only">Stock In</span>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => handleStockClick(item, "out")}
+                            title="Stock Out"
+                          >
+                            <ArrowDown className="size-4" />
+                            <span className="sr-only">Stock Out</span>
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="size-8">
+                                <MoreHorizontal className="size-4" />
+                                <span className="sr-only">Actions</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => onEditItem(item)}>
+                                <Edit className="mr-2 size-4" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleHistoryClick(item)}>
+                                <History className="mr-2 size-4" />
+                                History
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setItemToDelete(item)
+                                  setDeleteDialogOpen(true)
+                                }}
+                                className="text-red-600"
+                              >
+                                <Trash2 className="mr-2 size-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )
@@ -428,14 +442,6 @@ export default function ItemsTable({
                               <Edit className="mr-2 size-4" />
                               Edit
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleStockClick(item, "in")}>
-                              <ArrowUp className="mr-2 size-4" />
-                              Stock In
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleStockClick(item, "out")}>
-                              <ArrowDown className="mr-2 size-4" />
-                              Stock Out
-                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleHistoryClick(item)}>
                               <History className="mr-2 size-4" />
                               History
@@ -455,7 +461,7 @@ export default function ItemsTable({
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-3">
                     <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
                       <div className="min-w-0">
                         <span className="text-muted-foreground">Category: </span>
@@ -469,6 +475,29 @@ export default function ItemsTable({
                         <span className="text-muted-foreground">Value: </span>
                         <span className="font-medium">{formatINR(itemValue)}</span>
                       </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 border-t border-border pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 text-green-600 hover:text-green-700 hover:bg-green-50"
+                        onClick={() => handleStockClick(item, "in")}
+                        title="Stock In"
+                      >
+                        <ArrowUp className="size-4" />
+                        <span className="sr-only">Stock In</span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => handleStockClick(item, "out")}
+                        title="Stock Out"
+                      >
+                        <ArrowDown className="size-4" />
+                        <span className="sr-only">Stock Out</span>
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
