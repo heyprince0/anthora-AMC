@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/lib/auth-context"
-import { Package, AlertTriangle, Minus, TrendingUp, Truck, Plus, ScanBarcode } from "lucide-react"
+import { Package, AlertTriangle, Minus, TrendingUp, Truck, Plus, ScanBarcode, ArrowLeftRight, FolderTree } from "lucide-react"
 import { toast } from "sonner"
 import InventorySummaryStrip from "./components/InventorySummaryStrip"
 import ItemsTable from "./components/ItemsTable"
@@ -239,13 +239,24 @@ export default function StocksPage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList>
-            <TabsTrigger value="items">
-              Items ({currentInventoryCount || 0})
+          <TabsList className="w-full justify-start overflow-x-auto sm:w-auto sm:justify-center">
+            <TabsTrigger value="items" className="flex shrink-0 items-center gap-1.5 whitespace-nowrap">
+              <Package className="size-4" />
+              <span>Items</span>
+              <span className="text-xs text-muted-foreground">({currentInventoryCount || 0})</span>
             </TabsTrigger>
-            <TabsTrigger value="movements">Stock Movements</TabsTrigger>
-            <TabsTrigger value="categories">Categories</TabsTrigger>
-            <TabsTrigger value="suppliers">Suppliers</TabsTrigger>
+            <TabsTrigger value="movements" className="flex shrink-0 items-center gap-1.5 whitespace-nowrap">
+              <ArrowLeftRight className="size-4" />
+              <span>Stock Movements</span>
+            </TabsTrigger>
+            <TabsTrigger value="categories" className="flex shrink-0 items-center gap-1.5 whitespace-nowrap">
+              <FolderTree className="size-4" />
+              <span>Categories</span>
+            </TabsTrigger>
+            <TabsTrigger value="suppliers" className="flex shrink-0 items-center gap-1.5 whitespace-nowrap">
+              <Truck className="size-4" />
+              <span>Suppliers</span>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="items" className="mt-4">
