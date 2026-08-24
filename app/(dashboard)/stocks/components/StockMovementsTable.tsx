@@ -35,6 +35,7 @@ interface StockMovement {
   reference_id: string | null
   supplier_id: string | null
   technician_id: string | null
+  customer_name: string | null   // <-- added
   notes: string | null
   created_by: string | null
   created_at: string
@@ -214,7 +215,7 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
           </div>
         </div>
 
-        {/* Desktop / tablet table view - unchanged */}
+        {/* Desktop / tablet table view - added Customer column */}
         <div className="hidden md:block border rounded-lg overflow-hidden">
           <Table>
             <TableHeader>
@@ -226,19 +227,20 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
                 <TableHead>Reason</TableHead>
                 <TableHead>Technician</TableHead>
                 <TableHead>Supplier</TableHead>
+                <TableHead>Customer</TableHead>   {/* new */}
                 <TableHead>Notes</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                     Loading stock movements...
                   </TableCell>
                 </TableRow>
               ) : filteredMovements.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                     {searchTerm || filterType !== "all" || filterReason !== "all"
                       ? "No movements found matching filters"
                       : "No stock movements recorded"}
@@ -269,6 +271,9 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
                     <TableCell className="text-sm">{movement.reason}</TableCell>
                     <TableCell className="text-sm">{getTechnicianName(movement.technician_id)}</TableCell>
                     <TableCell className="text-sm">{getSupplierName(movement.supplier_id)}</TableCell>
+                    <TableCell className="text-sm">
+                      {movement.customer_name || "—"}   {/* display the text */}
+                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
                       {movement.notes || "—"}
                     </TableCell>
@@ -279,7 +284,7 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
           </Table>
         </div>
 
-        {/* Mobile card view - compact, same data as the table above */}
+        {/* Mobile card view - added Customer */}
         <div className="flex flex-col gap-2.5 md:hidden">
           {loading ? (
             <div className="text-center py-8 text-muted-foreground">Loading stock movements...</div>
@@ -326,6 +331,10 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
                   <div className="min-w-0">
                     <span className="text-muted-foreground">Supplier: </span>
                     <span className="font-medium">{getSupplierName(movement.supplier_id)}</span>
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-muted-foreground">Customer: </span>
+                    <span className="font-medium">{movement.customer_name || "—"}</span>
                   </div>
                   {movement.notes && (
                     <div className="col-span-2 min-w-0">
