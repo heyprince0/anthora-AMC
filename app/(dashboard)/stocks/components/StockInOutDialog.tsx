@@ -57,8 +57,9 @@ export default function StockInOutDialog({
   const [reason, setReason] = useState("")
   const [notes, setNotes] = useState("")
   const [supplierId, setSupplierId] = useState("")
-  const [suppliers, setSuppliers] = useState<Array<{ id: string; name: string }>>([])
+  const [customerName, setCustomerName] = useState("")   // <-- simple text
   const [technicianId, setTechnicianId] = useState("")
+  const [suppliers, setSuppliers] = useState<Array<{ id: string; name: string }>>([])
   const [technicians, setTechnicians] = useState<Array<{ id: string; name: string }>>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -69,6 +70,7 @@ export default function StockInOutDialog({
       setReason("")
       setNotes("")
       setSupplierId("")
+      setCustomerName("")
       setTechnicianId("")
       setError("")
       loadSuppliers()
@@ -138,19 +140,26 @@ export default function StockInOutDialog({
 
       if (updateError) throw updateError
 
-      // Create stock movement record
+      // Build movement record
+      const movementData: any = {
+        org_id: orgId,
+        item_id: item.id,
+        movement_type: mode,
+        quantity: quantity,
+        reason: reason,
+        supplier_id: supplierId || null,
+        technician_id: technicianId || null,
+        notes: notes || null,
+      }
+
+      // Add customer_name only for stock out and if filled
+      if (mode === "out" && customerName.trim()) {
+        movementData.customer_name = customerName.trim()
+      }
+
       const { error: movementError } = await supabase
         .from("inventory_stock_movements")
-        .insert([{
-          org_id: orgId,
-          item_id: item.id,
-          movement_type: mode,
-          quantity: quantity,
-          reason: reason,
-          supplier_id: supplierId || null,
-          technician_id: technicianId || null,
-          notes: notes || null,
-        }])
+        .insert([movementData])
 
       if (movementError) throw movementError
 
@@ -235,6 +244,19 @@ export default function StockInOutDialog({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          )}
+
+          {/* Customer Name – free text, only for Stock Out */}
+          {mode === "out" && (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="customerName">Customer Name (optional)</Label>
+              <Input
+                id="customerName"
+                placeholder="Enter customer name"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+              />
             </div>
           )}
 
