@@ -291,7 +291,7 @@ export default function ItemsTable({
           </div>
         </div>
 
-        {/* Desktop / tablet table view - unchanged */}
+        {/* Desktop / tablet table view - with text labels on buttons */}
         <div className="hidden md:block border rounded-lg overflow-hidden">
           <Table>
             <TableHeader>
@@ -342,25 +342,27 @@ export default function ItemsTable({
                       <TableCell className="text-right text-sm">{formatINR(itemValue)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
+                          {/* Stock In - now with text */}
                           <Button
                             variant="ghost"
-                            size="icon"
-                            className="size-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                            size="sm"
+                            className="text-green-600 hover:text-green-700 hover:bg-green-50"
                             onClick={() => handleStockClick(item, "in")}
                             title="Stock In"
                           >
-                            <ArrowUp className="size-4" />
-                            <span className="sr-only">Stock In</span>
+                            <ArrowUp className="mr-1 size-4" />
+                            In
                           </Button>
+                          {/* Stock Out - now with text */}
                           <Button
                             variant="ghost"
-                            size="icon"
-                            className="size-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            size="sm"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
                             onClick={() => handleStockClick(item, "out")}
                             title="Stock Out"
                           >
-                            <ArrowDown className="size-4" />
-                            <span className="sr-only">Stock Out</span>
+                            <ArrowDown className="mr-1 size-4" />
+                            Out
                           </Button>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -400,7 +402,7 @@ export default function ItemsTable({
           </Table>
         </div>
 
-        {/* Mobile card view - individual cards, same style as Customers page */}
+        {/* Mobile card view - with text labels on buttons */}
         <div className="grid gap-4 sm:grid-cols-2 md:hidden">
           {loading ? (
             <div className="text-center py-8 col-span-full text-muted-foreground">Loading inventory items...</div>
@@ -485,8 +487,8 @@ export default function ItemsTable({
                         onClick={() => handleStockClick(item, "in")}
                         title="Stock In"
                       >
-                        <ArrowUp className="size-4" />
-                        <span className="sr-only">Stock In</span>
+                        <ArrowUp className="mr-1 size-4" />
+                        In
                       </Button>
                       <Button
                         variant="outline"
@@ -495,8 +497,8 @@ export default function ItemsTable({
                         onClick={() => handleStockClick(item, "out")}
                         title="Stock Out"
                       >
-                        <ArrowDown className="size-4" />
-                        <span className="sr-only">Stock Out</span>
+                        <ArrowDown className="mr-1 size-4" />
+                        Out
                       </Button>
                     </div>
                   </CardContent>
