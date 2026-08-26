@@ -201,21 +201,25 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
               </SelectContent>
             </Select>
 
-            {/* Date filter with visible label */}
-            <div className="flex items-center gap-1">
-              <span className="text-sm text-muted-foreground whitespace-nowrap">Date</span>
+            {/* Date filter with label INSIDE the input */}
+            <div className="relative w-[160px]">
               <Input
                 type="date"
-                className="w-[160px]"
+                className="w-full"
                 value={filterDate}
                 onChange={(e) => setFilterDate(e.target.value)}
               />
-              {filterDate && (
-                <Button variant="ghost" size="sm" onClick={() => setFilterDate("")}>
-                  Clear
-                </Button>
+              {!filterDate && (
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">
+                  Date
+                </span>
               )}
             </div>
+            {filterDate && (
+              <Button variant="ghost" size="sm" onClick={() => setFilterDate("")}>
+                Clear
+              </Button>
+            )}
           </div>
         </div>
 
