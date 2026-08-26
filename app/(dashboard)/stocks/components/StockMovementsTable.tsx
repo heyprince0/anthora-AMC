@@ -35,7 +35,7 @@ interface StockMovement {
   reference_id: string | null
   supplier_id: string | null
   technician_id: string | null
-  customer_name: string | null   // <-- added
+  customer_name: string | null
   notes: string | null
   created_by: string | null
   created_at: string
@@ -175,7 +175,7 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap items-center">
             <Select value={filterType} onValueChange={setFilterType}>
               <SelectTrigger className="w-[120px]">
                 <SelectValue placeholder="Type" />
@@ -201,21 +201,25 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
               </SelectContent>
             </Select>
 
-            <Input
-              type="date"
-              className="w-[160px]"
-              value={filterDate}
-              onChange={(e) => setFilterDate(e.target.value)}
-            />
-            {filterDate && (
-              <Button variant="ghost" size="sm" onClick={() => setFilterDate("")}>
-                Clear Date
-              </Button>
-            )}
+            {/* Date filter with visible label */}
+            <div className="flex items-center gap-1">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Date</span>
+              <Input
+                type="date"
+                className="w-[160px]"
+                value={filterDate}
+                onChange={(e) => setFilterDate(e.target.value)}
+              />
+              {filterDate && (
+                <Button variant="ghost" size="sm" onClick={() => setFilterDate("")}>
+                  Clear
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Desktop / tablet table view - added Customer column */}
+        {/* Desktop / tablet table view */}
         <div className="hidden md:block border rounded-lg overflow-hidden">
           <Table>
             <TableHeader>
@@ -227,7 +231,7 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
                 <TableHead>Reason</TableHead>
                 <TableHead>Technician</TableHead>
                 <TableHead>Supplier</TableHead>
-                <TableHead>Customer</TableHead>   {/* new */}
+                <TableHead>Customer</TableHead>
                 <TableHead>Notes</TableHead>
               </TableRow>
             </TableHeader>
@@ -272,7 +276,7 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
                     <TableCell className="text-sm">{getTechnicianName(movement.technician_id)}</TableCell>
                     <TableCell className="text-sm">{getSupplierName(movement.supplier_id)}</TableCell>
                     <TableCell className="text-sm">
-                      {movement.customer_name || "—"}   {/* display the text */}
+                      {movement.customer_name || "—"}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
                       {movement.notes || "—"}
@@ -284,7 +288,7 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
           </Table>
         </div>
 
-        {/* Mobile card view - added Customer */}
+        {/* Mobile card view */}
         <div className="flex flex-col gap-2.5 md:hidden">
           {loading ? (
             <div className="text-center py-8 text-muted-foreground">Loading stock movements...</div>
