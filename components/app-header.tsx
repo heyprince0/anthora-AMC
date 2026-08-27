@@ -25,17 +25,10 @@ interface NotificationItem {
   type: "expired" | "today-servicing" | "expiring-soon"
 }
 
-// FIXED: module-level cache, not component state/refs. useRef and
-// useState both reset to their initial value whenever a component fully
-// unmounts and remounts — which is what's happening here since this
-// root layout.tsx doesn't render <AppHeader />, meaning it must live in
-// a nested per-route layout or per-page, and is very likely remounting
-// on every navigation. A module-level object lives outside any
-// component instance and survives remounts for the whole browser
-// session, so every fresh mount starts from the last known data instead
-// of blank — nothing to visibly flicker.
+// Module-level cache – survives remounts
 const headerCache: {
   trialDaysRemaining: number | null
+  subscriptionDaysRemaining: number | null
   notifications: NotificationItem[]
   expiredCount: number
   todayServicingCount: number
@@ -45,6 +38,7 @@ const headerCache: {
   planName: string | null
 } = {
   trialDaysRemaining: null,
+  subscriptionDaysRemaining: null,
   notifications: [],
   expiredCount: 0,
   todayServicingCount: 0,
@@ -57,25 +51,18 @@ const headerCache: {
 export function AppHeader() {
   const { user, role, orgId, orgName } = useAuth()
 
-  // Seed state from the module cache instead of blank defaults
+  // Seed state from cache
   const [notifications, setNotifications] = useState<NotificationItem[]>(headerCache.notifications)
   const [expiredCount, setExpiredCount] = useState(headerCache.expiredCount)
   const [todayServicingCount, setTodayServicingCount] = useState(headerCache.todayServicingCount)
   const [expiringSoonCount, setExpiringSoonCount] = useState(headerCache.expiringSoonCount)
   const [trialDaysRemaining, setTrialDaysRemaining] = useState<number | null>(headerCache.trialDaysRemaining)
+  const [subscriptionDaysRemaining, setSubscriptionDaysRemaining] = useState<number | null>(headerCache.subscriptionDaysRemaining)
 
   // Plan limits for trial detection
   const { status, planName, isLoading: limitsLoading, refetch: refetchLimits } = usePlanLimits(orgId)
 
-  // FIXED: this is the missing piece — status/planName come from the
-  // usePlanLimits hook, which refetches independently every time
-  // AppHeader remounts (same problem the trialDaysRemaining/notifications
-  // cache already solved, just for a different data source). We mirror
-  // the same seed-from-cache + write-through pattern here so the
-  // banner's visibility never depends on this specific hook's own fresh
-  // loading cycle — exactly like `role` never flickers in the sidebar
-  // because it comes from the persistent AuthProvider instead of a
-  // per-component fetch.
+  // Cache status/planName
   const [displayStatus, setDisplayStatus] = useState<string | null>(headerCache.status)
   const [displayPlanName, setDisplayPlanName] = useState<string | null>(headerCache.planName)
 
@@ -90,8 +77,58 @@ export function AppHeader() {
     }
   }, [status, planName, limitsLoading])
 
-  const [trialDateLoading, setTrialDateLoading] = useState(!headerCache.hasLoadedOnce)
+  const [dateLoading, setDateLoading] = useState(!headerCache.hasLoadedOnce)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+
+  // Load both trial end and current period end
+  const loadDates = async () => {
+    if (!orgId) return
+    setDateLoading(true)
+    try {
+      const { data, error } = await supabase
+        .from("subscriptions")
+        .select("trial_end_date, current_period_end")
+        .eq("org_id", orgId)
+        .maybeSingle()
+
+      if (error) throw error
+
+      // Trial days
+      let trialDays: number | null = null
+      if (data?.trial_end_date) {
+        const end = new Date(data.trial_end_date)
+        const today = new Date()
+        end.setHours(0, 0, 0, 0)
+        today.setHours(0, 0, 0, 0)
+        const diff = Math.ceil((end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+        trialDays = Math.max(diff, 0)
+      }
+      setTrialDaysRemaining(trialDays)
+      headerCache.trialDaysRemaining = trialDays
+
+      // Subscription period end days
+      let subDays: number | null = null
+      if (data?.current_period_end) {
+        const end = new Date(data.current_period_end)
+        const today = new Date()
+        end.setHours(0, 0, 0, 0)
+        today.setHours(0, 0, 0, 0)
+        const diff = Math.ceil((end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+        subDays = Math.max(diff, -30) // clamp at -30 to avoid huge negatives
+      }
+      setSubscriptionDaysRemaining(subDays)
+      headerCache.subscriptionDaysRemaining = subDays
+    } catch (error) {
+      console.error("Error loading dates:", error)
+      setTrialDaysRemaining(null)
+      headerCache.trialDaysRemaining = null
+      setSubscriptionDaysRemaining(null)
+      headerCache.subscriptionDaysRemaining = null
+    } finally {
+      setDateLoading(false)
+      headerCache.hasLoadedOnce = true
+    }
+  }
 
   const loadAlerts = async () => {
     if (!user?.id || !orgId) return
@@ -150,7 +187,6 @@ export function AppHeader() {
       setExpiringSoonCount(expiringSoon)
       setNotifications(items.slice(0, 10))
 
-      // Write through to the module cache so the next mount starts here
       headerCache.expiredCount = expired
       headerCache.todayServicingCount = todayServicing
       headerCache.expiringSoonCount = expiringSoon
@@ -160,43 +196,10 @@ export function AppHeader() {
     }
   }
 
-  const loadTrialDate = async () => {
-    if (!orgId) return
-    setTrialDateLoading(true)
-    try {
-      const { data, error } = await supabase
-        .from("subscriptions")
-        .select("trial_end_date")
-        .eq("org_id", orgId)
-        .maybeSingle()
-
-      if (error) throw error
-
-      let days: number | null = null
-      if (data?.trial_end_date) {
-        const end = new Date(data.trial_end_date)
-        const today = new Date()
-        end.setHours(0, 0, 0, 0)
-        today.setHours(0, 0, 0, 0)
-        const diffDays = Math.ceil((end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-        days = Math.max(diffDays, 0)
-      }
-      setTrialDaysRemaining(days)
-      headerCache.trialDaysRemaining = days
-    } catch (error) {
-      console.error("Error loading trial date:", error)
-      setTrialDaysRemaining(null)
-      headerCache.trialDaysRemaining = null
-    } finally {
-      setTrialDateLoading(false)
-      headerCache.hasLoadedOnce = true
-    }
-  }
-
   useEffect(() => {
     if (orgId) {
       loadAlerts()
-      loadTrialDate()
+      loadDates()
     }
   }, [orgId])
 
@@ -220,17 +223,19 @@ export function AppHeader() {
 
   const handleUpgradeSuccess = () => {
     refetchLimits()
-    loadTrialDate()
+    loadDates()
   }
 
-  // No longer dependent on the hook's own fresh status at all —
-  // displayStatus falls back to the last known cached value immediately
-  // on remount, so this never flickers false just because the hook's
-  // own fetch hasn't resolved yet on this particular mount.
+  // Determine which banner to show (trial first, then subscription expiry)
   const showTrialBanner = displayStatus === 'trial'
+  const showSubscriptionBanner = !showTrialBanner && 
+    (displayStatus === 'active' || displayStatus === 'expired') &&
+    subscriptionDaysRemaining !== null &&
+    subscriptionDaysRemaining <= 3
 
-  const getUrgencyStyles = () => {
-    if (trialDaysRemaining === null) {
+  // Helper: urgency styles based on days remaining (for both banners)
+  const getUrgencyStyles = (days: number | null) => {
+    if (days === null) {
       return {
         wrapper: "from-blue-50 to-indigo-50 border-blue-200/60",
         iconBg: "bg-blue-100 text-blue-600",
@@ -239,7 +244,7 @@ export function AppHeader() {
         button: "bg-blue-600 hover:bg-blue-700",
       }
     }
-    if (trialDaysRemaining <= 3) {
+    if (days <= 0) {
       return {
         wrapper: "from-red-50 to-orange-50 border-red-200/60",
         iconBg: "bg-red-100 text-red-600",
@@ -248,13 +253,22 @@ export function AppHeader() {
         button: "bg-red-600 hover:bg-red-700",
       }
     }
-    if (trialDaysRemaining <= 7) {
+    if (days <= 3) {
       return {
         wrapper: "from-orange-50 to-amber-50 border-orange-200/60",
         iconBg: "bg-orange-100 text-orange-600",
         text: "text-orange-900",
         subtext: "text-orange-700/70",
         button: "bg-orange-600 hover:bg-orange-700",
+      }
+    }
+    if (days <= 7) {
+      return {
+        wrapper: "from-amber-50 to-yellow-50 border-amber-200/60",
+        iconBg: "bg-amber-100 text-amber-600",
+        text: "text-amber-900",
+        subtext: "text-amber-700/70",
+        button: "bg-amber-600 hover:bg-amber-700",
       }
     }
     return {
@@ -266,24 +280,25 @@ export function AppHeader() {
     }
   }
 
-  const urgency = getUrgencyStyles()
+  const trialUrgency = getUrgencyStyles(trialDaysRemaining)
+  const subscriptionUrgency = getUrgencyStyles(subscriptionDaysRemaining)
 
   return (
     <>
       <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b border-border bg-card px-4 md:px-6">
         <SidebarTrigger className="md:hidden" />
 
-        {/* Trial Banner – mobile friendly, no loading-gated flicker */}
+        {/* Trial Banner */}
         {showTrialBanner && (
           <div
-            className={`flex flex-1 items-center justify-between gap-2 rounded-xl border bg-gradient-to-r ${urgency.wrapper} px-3 py-1.5 sm:px-4 sm:py-2 flex-wrap`}
+            className={`flex flex-1 items-center justify-between gap-2 rounded-xl border bg-gradient-to-r ${trialUrgency.wrapper} px-3 py-1.5 sm:px-4 sm:py-2 flex-wrap`}
           >
             <div className="flex items-center gap-2 min-w-0">
-              <div className={`flex size-7 shrink-0 items-center justify-center rounded-full ${urgency.iconBg} sm:size-8`}>
+              <div className={`flex size-7 shrink-0 items-center justify-center rounded-full ${trialUrgency.iconBg} sm:size-8`}>
                 <Sparkles className="size-3.5 sm:size-4" />
               </div>
               <div className="min-w-0 flex flex-col sm:flex-row sm:items-baseline sm:gap-2">
-                <span className={`font-semibold text-xs sm:text-sm ${urgency.text} truncate`}>
+                <span className={`font-semibold text-xs sm:text-sm ${trialUrgency.text} truncate`}>
                   {trialDaysRemaining !== null ? (
                     <>
                       {trialDaysRemaining} {trialDaysRemaining === 1 ? "day" : "days"} left
@@ -292,17 +307,52 @@ export function AppHeader() {
                     "Free trial"
                   )}
                 </span>
-                <span className={`text-[10px] sm:text-xs ${urgency.subtext} truncate hidden sm:inline`}>
+                <span className={`text-[10px] sm:text-xs ${trialUrgency.subtext} truncate hidden sm:inline`}>
                   {displayPlanName || "Free Trial"} plan
                 </span>
               </div>
             </div>
             <Button
               size="sm"
-              className={`${urgency.button} text-white text-[10px] sm:text-xs px-2 sm:px-3 py-1 h-7 sm:h-8 gap-1 shrink-0`}
+              className={`${trialUrgency.button} text-white text-[10px] sm:text-xs px-2 sm:px-3 py-1 h-7 sm:h-8 gap-1 shrink-0`}
               onClick={handleUpgrade}
             >
               Upgrade
+              <ArrowRight className="size-3 hidden sm:inline" />
+            </Button>
+          </div>
+        )}
+
+        {/* Subscription Expiry Banner */}
+        {showSubscriptionBanner && (
+          <div
+            className={`flex flex-1 items-center justify-between gap-2 rounded-xl border bg-gradient-to-r ${subscriptionUrgency.wrapper} px-3 py-1.5 sm:px-4 sm:py-2 flex-wrap`}
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <div className={`flex size-7 shrink-0 items-center justify-center rounded-full ${subscriptionUrgency.iconBg} sm:size-8`}>
+                <Sparkles className="size-3.5 sm:size-4" />
+              </div>
+              <div className="min-w-0 flex flex-col sm:flex-row sm:items-baseline sm:gap-2">
+                <span className={`font-semibold text-xs sm:text-sm ${subscriptionUrgency.text} truncate`}>
+                  {subscriptionDaysRemaining !== null && subscriptionDaysRemaining > 0 ? (
+                    <>
+                      {subscriptionDaysRemaining} {subscriptionDaysRemaining === 1 ? "day" : "days"} until expiry
+                    </>
+                  ) : (
+                    "Subscription expired"
+                  )}
+                </span>
+                <span className={`text-[10px] sm:text-xs ${subscriptionUrgency.subtext} truncate hidden sm:inline`}>
+                  {displayPlanName || "Plan"} — {displayStatus === 'expired' ? 'renew now' : 'renew to continue'}
+                </span>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              className={`${subscriptionUrgency.button} text-white text-[10px] sm:text-xs px-2 sm:px-3 py-1 h-7 sm:h-8 gap-1 shrink-0`}
+              onClick={handleUpgrade}
+            >
+              {displayStatus === 'expired' ? 'Renew' : 'Upgrade'}
               <ArrowRight className="size-3 hidden sm:inline" />
             </Button>
           </div>
@@ -358,7 +408,7 @@ export function AppHeader() {
         </div>
       </header>
 
-      {/* Upgrade Modal */}
+      {/* Upgrade / Renew Modal */}
       <PlanSelectionModal
         isOpen={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
