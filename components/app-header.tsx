@@ -86,7 +86,7 @@ export function AppHeader() {
       // Try to fetch all possible date columns
       const { data, error } = await supabase
         .from("subscriptions")
-        .select("trial_end_date, current_period_end, end_date, renewal_date")
+        .select("trial_end_date, current_period_end, end_date, renewal_date, next_billing_date")
         .eq("org_id", orgId)
         .maybeSingle()
 
@@ -107,7 +107,8 @@ export function AppHeader() {
 
       // Subscription period end – try multiple fields
       let periodEnd: string | null = null
-      if (data?.current_period_end) periodEnd = data.current_period_end
+      if (data?.next_billing_date) periodEnd = data.next_billing_date
+      else if (data?.current_period_end) periodEnd = data.current_period_end
       else if (data?.end_date) periodEnd = data.end_date
       else if (data?.renewal_date) periodEnd = data.renewal_date
 
