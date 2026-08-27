@@ -83,14 +83,19 @@ export function AppHeader() {
     if (!orgId) return
     setDateLoading(true)
     try {
-      // Try to fetch all possible date columns
+      // Select all columns (not by name) so a missing/renamed column
+      // never fails the whole query and silently hides the banner
       const { data, error } = await supabase
         .from("subscriptions")
-        .select("trial_end_date, current_period_end, end_date, renewal_date, next_billing_date")
+        .select("*")
         .eq("org_id", orgId)
         .maybeSingle()
 
       if (error) throw error
+
+      // TEMP DEBUG — check your browser console to confirm the real
+      // column names on your subscriptions row, then remove this log
+      console.log("🔍 [AppHeader] subscription row:", data)
 
       // Trial days
       let trialDays: number | null = null
