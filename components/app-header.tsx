@@ -83,6 +83,8 @@ export function AppHeader() {
     if (!orgId) return
     setDateLoading(true)
     try {
+      // Select all columns (not by name) so a missing/renamed column
+      // never fails the whole query and silently hides the banner
       const { data, error } = await supabase
         .from("subscriptions")
         .select("*")
@@ -90,6 +92,10 @@ export function AppHeader() {
         .maybeSingle()
 
       if (error) throw error
+
+      // TEMP DEBUG — check your browser console to confirm the real
+      // column names on your subscriptions row, then remove this log
+      console.log("🔍 [AppHeader] subscription row:", data)
 
       // Trial days
       let trialDays: number | null = null
@@ -104,21 +110,12 @@ export function AppHeader() {
       setTrialDaysRemaining(trialDays)
       headerCache.trialDaysRemaining = trialDays
 
-      // --- Find the subscription period end ---
+      // Subscription period end – try multiple fields
       let periodEnd: string | null = null
-
-      // Check known column names
       if (data?.next_billing_date) periodEnd = data.next_billing_date
       else if (data?.current_period_end) periodEnd = data.current_period_end
       else if (data?.end_date) periodEnd = data.end_date
       else if (data?.renewal_date) periodEnd = data.renewal_date
-
-      // FALLBACK: compute from start_date + 1 month (monthly plan)
-      if (!periodEnd && data?.start_date) {
-        const start = new Date(data.start_date)
-        start.setMonth(start.getMonth() + 1)
-        periodEnd = start.toISOString()
-      }
 
       let subDays: number | null = null
       if (periodEnd) {
@@ -254,7 +251,7 @@ export function AppHeader() {
         button: "bg-blue-600 hover:bg-blue-700",
       }
     }
-    if (days <= 0) {
+    if (days < 0) {
       return {
         wrapper: "from-red-50 to-orange-50 border-red-200/60",
         iconBg: "bg-red-100 text-red-600",
@@ -348,12 +345,14 @@ export function AppHeader() {
                     <>
                       {subscriptionDaysRemaining} {subscriptionDaysRemaining === 1 ? "day" : "days"} until expiry
                     </>
+                  ) : subscriptionDaysRemaining === 0 ? (
+                    "Expires today"
                   ) : (
                     "Subscription expired"
                   )}
                 </span>
                 <span className={`text-[10px] sm:text-xs ${subscriptionUrgency.subtext} truncate hidden sm:inline`}>
-                  {displayPlanName || "Plan"} — {displayStatus === 'expired' ? 'renew now' : 'renew to continue'}
+                  {displayPlanName || "Plan"} — {displayStatus === 'expired' || subscriptionDaysRemaining === 0 ? 'renew now' : 'renew to continue'}
                 </span>
               </div>
             </div>
@@ -362,7 +361,7 @@ export function AppHeader() {
               className={`${subscriptionUrgency.button} text-white text-[10px] sm:text-xs px-2 sm:px-3 py-1 h-7 sm:h-8 gap-1 shrink-0`}
               onClick={handleUpgrade}
             >
-              {displayStatus === 'expired' ? 'Renew' : 'Upgrade'}
+              {displayStatus === 'expired' || subscriptionDaysRemaining === 0 ? 'Renew' : 'Upgrade'}
               <ArrowRight className="size-3 hidden sm:inline" />
             </Button>
           </div>
