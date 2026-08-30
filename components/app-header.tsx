@@ -83,8 +83,6 @@ export function AppHeader() {
     if (!orgId) return
     setDateLoading(true)
     try {
-      // Select all columns (not by name) so a missing/renamed column
-      // never fails the whole query and silently hides the banner
       const { data, error } = await supabase
         .from("subscriptions")
         .select("*")
@@ -92,10 +90,6 @@ export function AppHeader() {
         .maybeSingle()
 
       if (error) throw error
-
-      // TEMP DEBUG — check your browser console to confirm the real
-      // column names on your subscriptions row, then remove this log
-      console.log("🔍 [AppHeader] subscription row:", data)
 
       // Trial days
       let trialDays: number | null = null
@@ -110,12 +104,21 @@ export function AppHeader() {
       setTrialDaysRemaining(trialDays)
       headerCache.trialDaysRemaining = trialDays
 
-      // Subscription period end – try multiple fields
+      // --- Find the subscription period end ---
       let periodEnd: string | null = null
+
+      // Check known column names
       if (data?.next_billing_date) periodEnd = data.next_billing_date
       else if (data?.current_period_end) periodEnd = data.current_period_end
       else if (data?.end_date) periodEnd = data.end_date
       else if (data?.renewal_date) periodEnd = data.renewal_date
+
+      // FALLBACK: compute from start_date + 1 month (monthly plan)
+      if (!periodEnd && data?.start_date) {
+        const start = new Date(data.start_date)
+        start.setMonth(start.getMonth() + 1)
+        periodEnd = start.toISOString()
+      }
 
       let subDays: number | null = null
       if (periodEnd) {
