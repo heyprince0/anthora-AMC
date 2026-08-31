@@ -3,6 +3,10 @@
     {
       "path": "/api/check-contracts",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/expire-subscriptions",
+      "schedule": "0 0 * * *"
     }
   ],
   "redirects": [
