@@ -18,9 +18,15 @@ import { supabase, type Quotation } from "@/lib/supabase"
 import { useAuth } from "@/lib/auth-context"
 import { usePlanLimits } from "@/lib/hooks/use-plan-limits"
 import LimitReachedModal from "@/components/billing/limit-reached-modal"
-import { Plus, Search, Eye, Trash2, Edit, Settings } from "lucide-react"
+import { Plus, Search, Eye, Trash2, Edit, Settings, MoreHorizontal } from "lucide-react"
 import Link from "next/link"
 import { toast } from "sonner"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -318,25 +324,27 @@ export default function QuotationsPage() {
                                   <span className="sr-only">View</span>
                                 </Button>
                               </Link>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                title="Edit Quotation"
-                                onClick={() => handleEditClick(quotation)}
-                              >
-                                <Edit className="size-4" />
-                                <span className="sr-only">Edit</span>
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => { setQuotationToDelete(quotation); setDeleteDialogOpen(true) }}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                title="Delete Quotation"
-                              >
-                                <Trash2 className="size-4" />
-                                <span className="sr-only">Delete</span>
-                              </Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm">
+                                    <MoreHorizontal className="size-4" />
+                                    <span className="sr-only">More actions</span>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => handleEditClick(quotation)}>
+                                    <Edit className="mr-2 size-4" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    className="text-red-600 focus:text-red-600"
+                                    onClick={() => { setQuotationToDelete(quotation); setDeleteDialogOpen(true) }}
+                                  >
+                                    <Trash2 className="mr-2 size-4" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -375,25 +383,27 @@ export default function QuotationsPage() {
                             <span className="sr-only">View</span>
                           </Button>
                         </Link>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          title="Edit Quotation"
-                          onClick={() => handleEditClick(quotation)}
-                        >
-                          <Edit className="size-4" />
-                          <span className="sr-only">Edit</span>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => { setQuotationToDelete(quotation); setDeleteDialogOpen(true) }}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          title="Delete Quotation"
-                        >
-                          <Trash2 className="size-4" />
-                          <span className="sr-only">Delete</span>
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="size-4" />
+                              <span className="sr-only">More actions</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEditClick(quotation)}>
+                              <Edit className="mr-2 size-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-red-600 focus:text-red-600"
+                              onClick={() => { setQuotationToDelete(quotation); setDeleteDialogOpen(true) }}
+                            >
+                              <Trash2 className="mr-2 size-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                   ))}
