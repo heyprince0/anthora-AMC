@@ -217,6 +217,10 @@ export default function QuotationsPage() {
   }
 
   const handleEditClick = (quotation: Quotation) => {
+    if (limitsLoading) {
+      toast.error("Checking your plan status, please try again in a moment...")
+      return
+    }
     if (status === 'expired' || status === 'cancelled') {
       setSubscriptionAlertOpen(true)
       return
