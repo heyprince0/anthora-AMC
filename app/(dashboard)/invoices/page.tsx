@@ -44,9 +44,15 @@ import { supabase, type Invoice } from "@/lib/supabase"
 import { useAuth } from "@/lib/auth-context"
 import { usePlanLimits } from "@/lib/hooks/use-plan-limits"
 import LimitReachedModal from "@/components/billing/limit-reached-modal"
-import { Plus, Search, Eye, Trash2, Settings } from "lucide-react"
+import { Plus, Search, Eye, Trash2, Settings, MoreHorizontal } from "lucide-react"
 import Link from "next/link"
 import { toast } from "sonner"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 function getPaymentStatusBadge(status: string) {
   const statusLower = (status || "").toLowerCase()
@@ -353,17 +359,26 @@ export default function InvoicesPage() {
                                   <span className="sr-only">View</span>
                                 </Button>
                               </Link>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setInvoiceToDelete(invoice)
-                                  setDeleteDialogOpen(true)
-                                }}
-                              >
-                                <Trash2 className="size-4 text-red-600" />
-                                <span className="sr-only">Delete</span>
-                              </Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm">
+                                    <MoreHorizontal className="size-4" />
+                                    <span className="sr-only">More actions</span>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    className="text-red-600 focus:text-red-600"
+                                    onClick={() => {
+                                      setInvoiceToDelete(invoice)
+                                      setDeleteDialogOpen(true)
+                                    }}
+                                  >
+                                    <Trash2 className="mr-2 size-4" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -406,17 +421,26 @@ export default function InvoicesPage() {
                             <span className="sr-only">View</span>
                           </Button>
                         </Link>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setInvoiceToDelete(invoice)
-                            setDeleteDialogOpen(true)
-                          }}
-                        >
-                          <Trash2 className="size-4 text-red-600" />
-                          <span className="sr-only">Delete</span>
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="size-4" />
+                              <span className="sr-only">More actions</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              className="text-red-600 focus:text-red-600"
+                              onClick={() => {
+                                setInvoiceToDelete(invoice)
+                                setDeleteDialogOpen(true)
+                              }}
+                            >
+                              <Trash2 className="mr-2 size-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                   ))}
