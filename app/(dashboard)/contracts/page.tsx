@@ -114,7 +114,7 @@ function formatTableDate(dateStr: string | null | undefined): string {
   const day = String(d.getDate()).padStart(2, '0')
   const month = d.toLocaleString('en-IN', { month: 'short' })
   const year = d.getFullYear()
-  return `${day}-${month}-${year}`
+  return `${day} ${month} ${year}`
 }
 
 function hexToRgb(hex: string): [number, number, number] {
