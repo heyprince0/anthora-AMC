@@ -107,6 +107,16 @@ function formatShortDate(dateStr: string | null): string {
   return d.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })
 }
 
+function formatTableDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return '—'
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return dateStr
+  const day = String(d.getDate()).padStart(2, '0')
+  const month = d.toLocaleString('en-IN', { month: 'short' })
+  const year = d.getFullYear()
+  return `${day}-${month}-${year}`
+}
+
 function hexToRgb(hex: string): [number, number, number] {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
   return result
@@ -719,9 +729,9 @@ export default function ContractsPage() {
                                 ? `₹${contract.contracts_price.toLocaleString('en-IN')}`
                                 : '—'}
                             </TableCell>
-                            <TableCell>{contract.endDate || '—'}</TableCell>
-                            <TableCell>{contract.start_date || '—'}</TableCell>
-                            <TableCell>{contract.next_service_date || '—'}</TableCell>
+                            <TableCell>{formatTableDate(contract.endDate)}</TableCell>
+                            <TableCell>{formatTableDate(contract.start_date)}</TableCell>
+                            <TableCell>{formatTableDate(contract.next_service_date)}</TableCell>
                             <TableCell>{getStatusBadge(days, contract.status)}</TableCell>
                             {/* Hide Actions cell for technicians */}
                             {!isTechnician && (
