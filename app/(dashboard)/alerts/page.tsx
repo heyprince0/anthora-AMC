@@ -126,7 +126,7 @@ export default function ServiceAlertsPage() {
   const [showLimitModal, setShowLimitModal] = useState(false)
   const [limitModalType, setLimitModalType] = useState<LimitModalType>('expired')
   const [limitModalCustom, setLimitModalCustom] = useState<{ title?: string; description?: string }>({})
-  const [limitValue, setLimitValue] = useState(0) // not used for expiry but kept for consistency
+  const [limitValue, setLimitValue] = useState(0)
   const [showPlanModal, setShowPlanModal] = useState(false)
   const [autoShown, setAutoShown] = useState(false)
 
@@ -156,7 +156,6 @@ export default function ServiceAlertsPage() {
   useEffect(() => {
     if (limitsLoading || !currentOrgId || autoShown) return
 
-    // Determine if subscription is expired/cancelled
     const isExpired = status === 'expired' || status === 'cancelled'
     if (isExpired) {
       setLimitModalType('expired')
@@ -168,6 +167,21 @@ export default function ServiceAlertsPage() {
       setAutoShown(true)
     }
   }, [limitsLoading, status, plan, currentOrgId, autoShown])
+
+  // Check function for button clicks
+  const checkAndShowLimitModal = (): boolean => {
+    const isExpired = status === 'expired' || status === 'cancelled'
+    if (isExpired) {
+      setLimitModalType('expired')
+      setLimitModalCustom({
+        title: `Your ${plan?.name || 'current'} plan has expired`,
+        description: `Renew your ${plan?.name || 'current'} plan to continue using service alerts.`,
+      })
+      setShowLimitModal(true)
+      return true
+    }
+    return false
+  }
 
   const loadServices = async () => {
     try {
@@ -183,9 +197,6 @@ export default function ServiceAlertsPage() {
         .select("*")
         .eq("org_id", currentOrgId)
 
-      // Pending jobs created via "Assign Technician" on this page — used only
-      // to show which technician (if any) is currently assigned to a service,
-      // so the card can display "Assigned to: X" like it already supports.
       const { data: assignedJobsData } = await supabase
         .from("technician_jobs")
         .select("*")
@@ -238,12 +249,15 @@ export default function ServiceAlertsPage() {
     }
   }
 
+  // Modified handlers with limit check
   const handleMarkComplete = (contract: Contract) => {
+    if (checkAndShowLimitModal()) return
     setSelectedContract(contract)
     setModalOpen(true)
   }
 
   const handleAssignTechnician = (contract: Contract) => {
+    if (checkAndShowLimitModal()) return
     setContractToAssign(contract)
     setAssignModalOpen(true)
   }
@@ -258,7 +272,6 @@ export default function ServiceAlertsPage() {
   }
 
   const handleSelectPlan = (plan: any, billingCycle: any) => {
-    // Placeholder – implement actual plan selection/checkout if needed
     alert(`Selected plan: ${plan.name} (${billingCycle})`)
     setShowPlanModal(false)
   }
@@ -410,7 +423,7 @@ export default function ServiceAlertsPage() {
           />
         )}
 
-        {/* Limit Reached Modal - same as Contracts page */}
+        {/* Limit Reached Modal */}
         <LimitReachedModal
           isOpen={showLimitModal}
           onClose={() => setShowLimitModal(false)}
@@ -421,7 +434,7 @@ export default function ServiceAlertsPage() {
           customDescription={limitModalCustom.description}
         />
 
-        {/* Plan Selection Modal - same as Contracts page */}
+        {/* Plan Selection Modal */}
         <PlanSelectionModal
           isOpen={showPlanModal}
           onClose={() => setShowPlanModal(false)}
