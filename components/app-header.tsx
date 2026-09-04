@@ -83,8 +83,6 @@ export function AppHeader() {
     if (!orgId) return
     setDateLoading(true)
     try {
-      // Select all columns (not by name) so a missing/renamed column
-      // never fails the whole query and silently hides the banner
       const { data, error } = await supabase
         .from("subscriptions")
         .select("*")
@@ -93,8 +91,7 @@ export function AppHeader() {
 
       if (error) throw error
 
-      // TEMP DEBUG — check your browser console to confirm the real
-      // column names on your subscriptions row, then remove this log
+      // TEMP DEBUG — remove after confirming column name
       console.log("🔍 [AppHeader] subscription row:", data)
 
       // Trial days
@@ -235,10 +232,11 @@ export function AppHeader() {
   }
 
   const showTrialBanner = displayStatus === 'trial'
+
+  // 🔥 CHANGED: show banner for ALL expired users, and for active users with ≤3 days left
   const showSubscriptionBanner = !showTrialBanner &&
-    (displayStatus === 'active' || displayStatus === 'expired') &&
-    subscriptionDaysRemaining !== null &&
-    subscriptionDaysRemaining <= 3
+    (displayStatus === 'expired' || 
+     (displayStatus === 'active' && subscriptionDaysRemaining !== null && subscriptionDaysRemaining <= 3))
 
   // Urgency styles for both banners
   const getUrgencyStyles = (days: number | null) => {
@@ -330,7 +328,7 @@ export function AppHeader() {
           </div>
         )}
 
-        {/* Subscription Expiry Banner */}
+        {/* Subscription Expiry Banner – now shows for ALL expired users */}
         {showSubscriptionBanner && (
           <div
             className={`flex flex-1 items-center justify-between gap-2 rounded-xl border bg-gradient-to-r ${subscriptionUrgency.wrapper} px-3 py-1.5 sm:px-4 sm:py-2 flex-wrap`}
