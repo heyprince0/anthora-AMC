@@ -9,7 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { supabase, type Contract, type Customer, type Technician, type TechnicianJob, getDaysUntilService } from "@/lib/supabase"
 import { useAuth } from "@/lib/auth-context"
 import { usePlanLimits } from "@/lib/hooks/use-plan-limits"
-import LimitReachedModal from "@/components/billing/limit-reached-modal"
+import LimitReachedModal, { LimitModalType } from "@/components/billing/limit-reached-modal"
+import PlanSelectionModal from "@/components/billing/PlanSelectionModal"
 import { AlertTriangle, Clock, CalendarClock, CheckCircle2, UserPlus } from "lucide-react"
 import { MarkCompleteModal } from "@/components/mark-complete-modal"
 import { AssignTechnicianModal } from "@/components/assign-technician-modal"
@@ -119,12 +120,15 @@ export default function ServiceAlertsPage() {
   const [contractToAssign, setContractToAssign] = useState<Contract | null>(null)
 
   // Plan limits
-  const { status, isLoading: limitsLoading } = usePlanLimits(currentOrgId)
+  const { status, plan, isLoading: limitsLoading } = usePlanLimits(currentOrgId)
 
-  // Limit modal state
+  // Limit modal state (same as Contracts page)
   const [showLimitModal, setShowLimitModal] = useState(false)
-  const [limitModalType, setLimitModalType] = useState<'expired' | 'resource-limit'>('expired')
+  const [limitModalType, setLimitModalType] = useState<LimitModalType>('expired')
   const [limitModalCustom, setLimitModalCustom] = useState<{ title?: string; description?: string }>({})
+  const [limitValue, setLimitValue] = useState(0) // not used for expiry but kept for consistency
+  const [showPlanModal, setShowPlanModal] = useState(false)
+  const [autoShown, setAutoShown] = useState(false)
 
   useEffect(() => {
     if (user?.id) {
@@ -148,15 +152,22 @@ export default function ServiceAlertsPage() {
     if (currentOrgId) loadServices()
   }, [currentOrgId])
 
-  // Check limits on page load
+  // Check limits on page load – similar to Contracts page
   useEffect(() => {
-    if (limitsLoading || !currentOrgId) return
-    if (status === 'expired' || status === 'cancelled') {
+    if (limitsLoading || !currentOrgId || autoShown) return
+
+    // Determine if subscription is expired/cancelled
+    const isExpired = status === 'expired' || status === 'cancelled'
+    if (isExpired) {
       setLimitModalType('expired')
-      setLimitModalCustom({})
+      setLimitModalCustom({
+        title: `Your ${plan?.name || 'current'} plan has expired`,
+        description: `Renew your ${plan?.name || 'current'} plan to continue using service alerts.`,
+      })
       setShowLimitModal(true)
+      setAutoShown(true)
     }
-  }, [limitsLoading, status, currentOrgId])
+  }, [limitsLoading, status, plan, currentOrgId, autoShown])
 
   const loadServices = async () => {
     try {
@@ -238,11 +249,18 @@ export default function ServiceAlertsPage() {
   }
 
   const handleAssignSuccess = () => loadServices()
-
   const handleModalSuccess = () => loadServices()
 
-  const handleUpgrade = () => {
-    window.location.href = '/billing'
+  // Upgrade flow: open PlanSelectionModal instead of redirect
+  const handleViewPlans = () => {
+    setShowLimitModal(false)
+    setShowPlanModal(true)
+  }
+
+  const handleSelectPlan = (plan: any, billingCycle: any) => {
+    // Placeholder – implement actual plan selection/checkout if needed
+    alert(`Selected plan: ${plan.name} (${billingCycle})`)
+    setShowPlanModal(false)
   }
 
   return (
@@ -392,14 +410,22 @@ export default function ServiceAlertsPage() {
           />
         )}
 
-        {/* Limit Reached Modal */}
+        {/* Limit Reached Modal - same as Contracts page */}
         <LimitReachedModal
           isOpen={showLimitModal}
           onClose={() => setShowLimitModal(false)}
           type={limitModalType}
-          onUpgrade={handleUpgrade}
+          onUpgrade={handleViewPlans}
+          limitValue={limitValue}
           customTitle={limitModalCustom.title}
           customDescription={limitModalCustom.description}
+        />
+
+        {/* Plan Selection Modal - same as Contracts page */}
+        <PlanSelectionModal
+          isOpen={showPlanModal}
+          onClose={() => setShowPlanModal(false)}
+          onSelectPlan={handleSelectPlan}
         />
       </div>
     </DashboardLayout>
