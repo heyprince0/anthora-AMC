@@ -25,7 +25,7 @@ interface NotificationItem {
   type: "expired" | "today-servicing" | "expiring-soon"
 }
 
-// Module‑level cache
+// Module‑level cache – survives remounts, prevents flicker
 const headerCache: {
   trialDaysRemaining: number | null
   subscriptionDaysRemaining: number | null
@@ -51,7 +51,7 @@ const headerCache: {
 export function AppHeader() {
   const { user, role, orgId, orgName } = useAuth()
 
-  // Seed from cache
+  // Seed state from cache
   const [notifications, setNotifications] = useState<NotificationItem[]>(headerCache.notifications)
   const [expiredCount, setExpiredCount] = useState(headerCache.expiredCount)
   const [todayServicingCount, setTodayServicingCount] = useState(headerCache.todayServicingCount)
@@ -78,7 +78,6 @@ export function AppHeader() {
   const [dateLoading, setDateLoading] = useState(!headerCache.hasLoadedOnce)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
 
-  // Load both trial and subscription expiry dates
   const loadDates = async () => {
     if (!orgId) return
     setDateLoading(true)
@@ -90,9 +89,6 @@ export function AppHeader() {
         .maybeSingle()
 
       if (error) throw error
-
-      // TEMP DEBUG — remove after confirming column name
-      console.log("🔍 [AppHeader] subscription row:", data)
 
       // Trial days
       let trialDays: number | null = null
@@ -107,12 +103,18 @@ export function AppHeader() {
       setTrialDaysRemaining(trialDays)
       headerCache.trialDaysRemaining = trialDays
 
-      // Subscription period end – try multiple fields
+      // Subscription period end – try common column names, fallback to start_date + 1 month
       let periodEnd: string | null = null
-      if (data?.next_billing_date) periodEnd = data.next_billing_date
-      else if (data?.current_period_end) periodEnd = data.current_period_end
+      if (data?.current_period_end) periodEnd = data.current_period_end
       else if (data?.end_date) periodEnd = data.end_date
       else if (data?.renewal_date) periodEnd = data.renewal_date
+      else if (data?.next_billing_date) periodEnd = data.next_billing_date
+      // fallback for monthly plans
+      else if (data?.start_date) {
+        const start = new Date(data.start_date)
+        start.setMonth(start.getMonth() + 1)
+        periodEnd = start.toISOString()
+      }
 
       let subDays: number | null = null
       if (periodEnd) {
@@ -121,7 +123,7 @@ export function AppHeader() {
         end.setHours(0, 0, 0, 0)
         today.setHours(0, 0, 0, 0)
         const diff = Math.ceil((end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-        subDays = Math.max(diff, -30)
+        subDays = Math.max(diff, -30) // cap at -30 to avoid huge negatives
       }
       setSubscriptionDaysRemaining(subDays)
       headerCache.subscriptionDaysRemaining = subDays
@@ -233,12 +235,15 @@ export function AppHeader() {
 
   const showTrialBanner = displayStatus === 'trial'
 
-  // 🔥 CHANGED: show banner for ALL expired users, and for active users with ≤3 days left
+  // ★★★ FIXED: show banner for:
+  // - expired status, OR
+  // - subscriptionDaysRemaining < 0 (overdue), OR
+  // - active with <=3 days left
   const showSubscriptionBanner = !showTrialBanner &&
-    (displayStatus === 'expired' || 
+    (displayStatus === 'expired' ||
+     (subscriptionDaysRemaining !== null && subscriptionDaysRemaining < 0) ||
      (displayStatus === 'active' && subscriptionDaysRemaining !== null && subscriptionDaysRemaining <= 3))
 
-  // Urgency styles for both banners
   const getUrgencyStyles = (days: number | null) => {
     if (days === null) {
       return {
@@ -293,7 +298,7 @@ export function AppHeader() {
       <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b border-border bg-card px-4 md:px-6">
         <SidebarTrigger className="md:hidden" />
 
-        {/* Trial Banner */}
+        {/* Trial Banner – unchanged */}
         {showTrialBanner && (
           <div
             className={`flex flex-1 items-center justify-between gap-2 rounded-xl border bg-gradient-to-r ${trialUrgency.wrapper} px-3 py-1.5 sm:px-4 sm:py-2 flex-wrap`}
@@ -328,7 +333,7 @@ export function AppHeader() {
           </div>
         )}
 
-        {/* Subscription Expiry Banner – now shows for ALL expired users */}
+        {/* Subscription Expiry Banner – now always shows "Expired" for overdue subscriptions */}
         {showSubscriptionBanner && (
           <div
             className={`flex flex-1 items-center justify-between gap-2 rounded-xl border bg-gradient-to-r ${subscriptionUrgency.wrapper} px-3 py-1.5 sm:px-4 sm:py-2 flex-wrap`}
@@ -343,14 +348,16 @@ export function AppHeader() {
                     <>
                       {subscriptionDaysRemaining} {subscriptionDaysRemaining === 1 ? "day" : "days"} until expiry
                     </>
-                  ) : subscriptionDaysRemaining === 0 ? (
-                    "Expires today"
                   ) : (
                     "Subscription expired"
                   )}
                 </span>
                 <span className={`text-[10px] sm:text-xs ${subscriptionUrgency.subtext} truncate hidden sm:inline`}>
-                  {displayPlanName || "Plan"} — {displayStatus === 'expired' || subscriptionDaysRemaining === 0 ? 'renew now' : 'renew to continue'}
+                  {displayPlanName || "Plan"} — {
+                    (displayStatus === 'expired' || subscriptionDaysRemaining === 0 || subscriptionDaysRemaining < 0)
+                      ? 'renew now'
+                      : 'renew to continue'
+                  }
                 </span>
               </div>
             </div>
@@ -359,7 +366,9 @@ export function AppHeader() {
               className={`${subscriptionUrgency.button} text-white text-[10px] sm:text-xs px-2 sm:px-3 py-1 h-7 sm:h-8 gap-1 shrink-0`}
               onClick={handleUpgrade}
             >
-              {displayStatus === 'expired' || subscriptionDaysRemaining === 0 ? 'Renew' : 'Upgrade'}
+              {displayStatus === 'expired' || subscriptionDaysRemaining === 0 || subscriptionDaysRemaining < 0
+                ? 'Renew'
+                : 'Upgrade'}
               <ArrowRight className="size-3 hidden sm:inline" />
             </Button>
           </div>
