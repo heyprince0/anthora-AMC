@@ -18,7 +18,7 @@ import { supabase, type Quotation } from "@/lib/supabase"
 import { useAuth } from "@/lib/auth-context"
 import { usePlanLimits } from "@/lib/hooks/use-plan-limits"
 import LimitReachedModal from "@/components/billing/limit-reached-modal"
-import { Plus, Search, Eye, Trash2, Edit, Settings, MoreHorizontal } from "lucide-react"
+import { Plus, Search, Eye, Trash2, Edit, Settings, MoreHorizontal, FileText } from "lucide-react"
 import Link from "next/link"
 import { toast } from "sonner"
 import {
@@ -292,6 +292,7 @@ export default function QuotationsPage() {
               </div>
             ) : (
               <>
+                {/* Desktop Table */}
                 <div className="hidden md:block overflow-x-auto">
                   <Table>
                     <TableHeader>
@@ -353,60 +354,108 @@ export default function QuotationsPage() {
                   </Table>
                 </div>
 
-                {/* Mobile card view - compact, same data as the table above */}
-                <div className="flex flex-col gap-2.5 md:hidden">
-                  {filteredQuotations.map((quotation) => (
-                    <div key={quotation.id} className="rounded-lg border bg-card p-3 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{quotation.quote_no}</p>
-                          <p className="text-xs text-muted-foreground truncate">{quotation.client_name}</p>
-                        </div>
-                        <p className="text-xs text-muted-foreground shrink-0">
-                          {new Date(quotation.created_at).toLocaleDateString("en-IN", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })}
-                        </p>
-                      </div>
+                {/* Mobile Card View - new design matching Contracts page */}
+                <div className="flex flex-col gap-4 md:hidden">
+                  {filteredQuotations.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">No quotations found</div>
+                  ) : (
+                    <>
+                      <p className="text-sm text-muted-foreground">
+                        You have{" "}
+                        <span className="font-medium text-foreground">{filteredQuotations.length}</span>{" "}
+                        quotations{" "}
+                        {searchTerm ? 'matching filters' : 'in total'}
+                      </p>
 
-                      <div className="mt-2.5 text-xs">
-                        <span className="text-muted-foreground">Grand Total: </span>
-                        <span className="font-medium">{formatCurrency(quotation.grand_total)}</span>
-                      </div>
+                      {filteredQuotations.map((quotation) => (
+                        <Card key={quotation.id} className="relative">
+                          <CardHeader className="pb-3">
+                            <div className="flex items-start justify-between gap-2">
+                              {/* Left: icon + quote_no + client */}
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                                  <FileText className="size-5 text-primary" />
+                                </div>
+                                <div className="min-w-0">
+                                  <CardTitle className="text-sm font-semibold leading-tight truncate">
+                                    {quotation.quote_no}
+                                  </CardTitle>
+                                  <CardDescription className="text-xs truncate mt-0.5">
+                                    {quotation.client_name || 'No client'}
+                                  </CardDescription>
+                                </div>
+                              </div>
 
-                      <div className="mt-2.5 flex items-center justify-end gap-1 border-t pt-2">
-                        <Link href={`/quotations/${quotation.id}`}>
-                          <Button variant="ghost" size="sm" title="View Quotation">
-                            <Eye className="size-4" />
-                            <span className="sr-only">View</span>
-                          </Button>
-                        </Link>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="size-4" />
-                              <span className="sr-only">More actions</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEditClick(quotation)}>
-                              <Edit className="mr-2 size-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-red-600 focus:text-red-600"
-                              onClick={() => { setQuotationToDelete(quotation); setDeleteDialogOpen(true) }}
-                            >
-                              <Trash2 className="mr-2 size-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                  ))}
+                              {/* Right: actions dropdown */}
+                              <div className="flex items-center gap-1 shrink-0">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="size-8">
+                                      <MoreHorizontal className="size-4" />
+                                      <span className="sr-only">Actions</span>
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => handleEditClick(quotation)}>
+                                      <Edit className="mr-2 size-4" />
+                                      Edit
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() => { setQuotationToDelete(quotation); setDeleteDialogOpen(true) }}
+                                      className="text-red-600 focus:text-red-600"
+                                    >
+                                      <Trash2 className="mr-2 size-4" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
+                            </div>
+                          </CardHeader>
+
+                          <CardContent className="space-y-3">
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                              <div>
+                                <p className="text-xs text-muted-foreground mb-0.5">Quote No</p>
+                                <p className="text-sm font-medium">{quotation.quote_no}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground mb-0.5">Client</p>
+                                <p className="text-sm font-medium truncate">{quotation.client_name || '—'}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground mb-0.5">Date</p>
+                                <p className="text-sm font-medium">
+                                  {new Date(quotation.created_at).toLocaleDateString("en-IN", {
+                                    day: "2-digit",
+                                    month: "short",
+                                    year: "numeric",
+                                  })}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground mb-0.5">Grand Total</p>
+                                <p className="text-sm font-medium">{formatCurrency(quotation.grand_total)}</p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-2 border-t border-border">
+                              <div className="text-xs text-muted-foreground truncate">
+                                {/* optional extra info – left empty for now */}
+                                &nbsp;
+                              </div>
+                              <Link href={`/quotations/${quotation.id}`}>
+                                <Button variant="ghost" size="sm" className="gap-2 shrink-0">
+                                  <Eye className="size-4" />
+                                  View
+                                </Button>
+                              </Link>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </>
+                  )}
                 </div>
               </>
             )}
