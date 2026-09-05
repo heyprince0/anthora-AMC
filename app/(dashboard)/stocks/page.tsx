@@ -2,12 +2,22 @@
 
 import { useEffect, useState } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/lib/auth-context"
-import { Package, AlertTriangle, Minus, TrendingUp, Truck, Plus, ScanBarcode, ArrowLeftRight, FolderTree } from "lucide-react"
+import {
+  Package,
+  AlertTriangle,
+  Minus,
+  TrendingUp,
+  Truck,
+  Plus,
+  ScanBarcode,
+  ArrowLeftRight,
+  FolderTree,
+  RefreshCw,
+} from "lucide-react"
 import { toast } from "sonner"
 import InventorySummaryStrip from "./components/InventorySummaryStrip"
 import ItemsTable from "./components/ItemsTable"
@@ -208,11 +218,42 @@ export default function StocksPage() {
     setRefreshTrigger(prev => prev + 1)
   }
 
+  const formatINR = (amount: number) => `₹${(amount || 0).toLocaleString("en-IN")}`
+
   return (
     <DashboardLayout>
-      <div className="flex flex-col gap-6">
-        {/* Page Header */}
-        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-4 md:gap-6">
+
+        {/* ── MOBILE header: compact with icon-only secondary buttons ── */}
+        <div className="flex items-center justify-between md:hidden">
+          <div>
+            <h1 className="text-xl font-bold text-foreground">Inventory</h1>
+            <p className="text-xs text-muted-foreground">Stock, items &amp; parts</p>
+          </div>
+          <div className="flex gap-1.5">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setScanDialogOpen(true)}
+              disabled={loading}
+              title="Scan Barcode"
+            >
+              <ScanBarcode className="size-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleRefresh}
+              disabled={loading}
+              title="Refresh"
+            >
+              <RefreshCw className="size-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* ── DESKTOP header: full layout (unchanged) ── */}
+        <div className="hidden md:flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Inventory</h1>
             <p className="text-muted-foreground">Manage your stock, items, and parts inventory</p>
@@ -228,16 +269,41 @@ export default function StocksPage() {
           </div>
         </div>
 
-        {/* Inventory Summary Strip */}
+        {/* ── MOBILE: Compact 3-tile stats strip ── */}
+        {/* Replaces the full InventorySummaryStrip on mobile so the tabs are immediately visible */}
+        <div className="grid grid-cols-3 gap-2 md:hidden">
+          <div className="rounded-lg border bg-card p-2.5 text-center">
+            <p className="text-lg font-bold leading-none">
+              {loading ? "—" : metrics?.totalItems ?? 0}
+            </p>
+            <p className="mt-1 text-[11px] text-muted-foreground">Total</p>
+          </div>
+          <div className="rounded-lg border bg-card p-2.5 text-center">
+            <p className="text-lg font-bold leading-none text-amber-600">
+              {loading ? "—" : metrics?.lowStockCount ?? 0}
+            </p>
+            <p className="mt-1 text-[11px] text-muted-foreground">Low Stock</p>
+          </div>
+          <div className="rounded-lg border bg-card p-2.5 text-center">
+            <p className="text-lg font-bold leading-none text-red-600">
+              {loading ? "—" : metrics?.outOfStockCount ?? 0}
+            </p>
+            <p className="mt-1 text-[11px] text-muted-foreground">Out of Stock</p>
+          </div>
+        </div>
+
+        {/* ── DESKTOP: Full Inventory Summary Strip ── */}
         {currentOrgId && (
-          <InventorySummaryStrip
-            metrics={metrics}
-            loading={loading}
-            orgId={currentOrgId}
-          />
+          <div className="hidden md:block">
+            <InventorySummaryStrip
+              metrics={metrics}
+              loading={loading}
+              orgId={currentOrgId}
+            />
+          </div>
         )}
 
-        {/* Tabs */}
+        {/* ── Tabs (visible immediately on mobile — no more scrolling past the strip) ── */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full justify-start overflow-x-auto sm:w-auto sm:justify-center">
             <TabsTrigger value="items" className="flex shrink-0 items-center gap-1.5 whitespace-nowrap sm:gap-2 sm:px-4">
@@ -247,7 +313,7 @@ export default function StocksPage() {
             </TabsTrigger>
             <TabsTrigger value="movements" className="flex shrink-0 items-center gap-1.5 whitespace-nowrap sm:gap-2 sm:px-4">
               <ArrowLeftRight className="size-4" />
-              <span>Stock Movements</span>
+              <span>Movements</span>
             </TabsTrigger>
             <TabsTrigger value="categories" className="flex shrink-0 items-center gap-1.5 whitespace-nowrap sm:gap-2 sm:px-4">
               <FolderTree className="size-4" />
@@ -320,6 +386,21 @@ export default function StocksPage() {
             categories={categories}
             onRefresh={handleRefresh}
           />
+        )}
+
+        {/* ── MOBILE FAB: floating Add Item button (Items tab only) ── */}
+        {activeTab === "items" && (
+          <div className="fixed bottom-6 right-6 z-40 md:hidden">
+            <Button
+              onClick={handleAddItem}
+              disabled={limitsLoading}
+              size="icon"
+              className="h-14 w-14 rounded-full shadow-lg"
+            >
+              <Plus className="size-6" />
+              <span className="sr-only">Add Item</span>
+            </Button>
+          </div>
         )}
       </div>
     </DashboardLayout>
