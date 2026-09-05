@@ -27,7 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { supabase } from "@/lib/supabase"
-import { Plus, Search, MoreHorizontal, Edit, Trash2, History, ArrowUp, ArrowDown } from "lucide-react"
+import { Plus, Search, MoreHorizontal, Edit, Trash2, History, ArrowUp, ArrowDown, Package } from "lucide-react"
 import { toast } from "sonner"
 import StockInOutDialog from "./StockInOutDialog"
 import StockHistoryDialog from "./StockHistoryDialog"
@@ -232,7 +232,7 @@ export default function ItemsTable({
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {/* Filters */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-center flex-wrap">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center flex-wrap">
           <div className="relative flex-1 min-w-[150px]">
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -245,7 +245,7 @@ export default function ItemsTable({
           </div>
           <div className="flex gap-2 flex-wrap">
             <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-[130px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -257,7 +257,7 @@ export default function ItemsTable({
             </Select>
 
             <Select value={filterCategory} onValueChange={setFilterCategory}>
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-[130px]">
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent>
@@ -271,7 +271,7 @@ export default function ItemsTable({
             </Select>
 
             <Select value={filterLocation} onValueChange={setFilterLocation}>
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-[130px]">
                 <SelectValue placeholder="Location" />
               </SelectTrigger>
               <SelectContent>
@@ -284,14 +284,15 @@ export default function ItemsTable({
               </SelectContent>
             </Select>
 
-            <Button onClick={onAddItem}>
+            {/* Add Item button — visible on desktop only; mobile uses the FAB */}
+            <Button onClick={onAddItem} className="hidden md:inline-flex">
               <Plus className="mr-2 size-4" />
               Add Item
             </Button>
           </div>
         </div>
 
-        {/* Desktop / tablet table view - with text labels on buttons */}
+        {/* ── DESKTOP: Table view (unchanged) ── */}
         <div className="hidden md:block border rounded-lg overflow-hidden">
           <Table>
             <TableHeader>
@@ -342,7 +343,6 @@ export default function ItemsTable({
                       <TableCell className="text-right text-sm">{formatINR(itemValue)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
-                          {/* Stock In - now with text */}
                           <Button
                             variant="ghost"
                             size="sm"
@@ -353,7 +353,6 @@ export default function ItemsTable({
                             <ArrowUp className="mr-1 size-4" />
                             In
                           </Button>
-                          {/* Stock Out - now with text */}
                           <Button
                             variant="ghost"
                             size="sm"
@@ -402,12 +401,12 @@ export default function ItemsTable({
           </Table>
         </div>
 
-        {/* Mobile card view - with text labels on buttons */}
-        <div className="grid gap-4 sm:grid-cols-2 md:hidden">
+        {/* ── MOBILE: Individual item cards ── */}
+        <div className="flex flex-col gap-4 md:hidden">
           {loading ? (
-            <div className="text-center py-8 col-span-full text-muted-foreground">Loading inventory items...</div>
+            <div className="text-center py-8 text-muted-foreground">Loading inventory items...</div>
           ) : filteredItems.length === 0 ? (
-            <div className="text-center py-8 col-span-full text-muted-foreground">
+            <div className="text-center py-8 text-muted-foreground">
               {searchTerm || filterStatus !== "all" || filterCategory !== "all" || filterLocation !== "all"
                 ? "No items found matching filters"
                 : "No inventory items yet"}
@@ -422,16 +421,24 @@ export default function ItemsTable({
                 <Card key={item.id} className="relative">
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between gap-2">
+                      {/* Left: icon + name + SKU/brand */}
                       <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                          <Package className="size-5 text-primary" />
+                        </div>
                         <div className="min-w-0">
-                          <CardTitle className="text-sm truncate">{item.name}</CardTitle>
-                          <CardDescription className="text-xs truncate">
+                          <CardTitle className="text-sm font-semibold leading-tight truncate">
+                            {item.name}
+                          </CardTitle>
+                          <CardDescription className="text-xs truncate mt-0.5">
                             {item.sku || "—"}{item.brand ? ` · ${item.brand}` : ""}
                           </CardDescription>
                         </div>
                       </div>
+
+                      {/* Right: status badge + 3-dot menu */}
                       <div className="flex items-center gap-1 shrink-0">
-                        <Badge className={`${stockStatus.color}`}>{stockStatus.status}</Badge>
+                        <Badge className={stockStatus.color}>{stockStatus.status}</Badge>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="size-8">
@@ -463,42 +470,62 @@ export default function ItemsTable({
                       </div>
                     </div>
                   </CardHeader>
+
                   <CardContent className="space-y-3">
-                    <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
-                      <div className="min-w-0">
-                        <span className="text-muted-foreground">Category: </span>
-                        <span className="font-medium">{category?.name || "—"}</span>
+                    {/* Stock level — prominent highlight box */}
+                    <div className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2.5">
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-0.5">Current Stock</p>
+                        <p className="text-lg font-bold leading-none">
+                          {item.current_stock}{" "}
+                          <span className="text-sm font-normal text-muted-foreground">{item.unit}</span>
+                        </p>
                       </div>
-                      <div className="min-w-0">
-                        <span className="text-muted-foreground">Stock: </span>
-                        <span className="font-medium">{item.current_stock} {item.unit}</span>
-                      </div>
-                      <div className="col-span-2 min-w-0">
-                        <span className="text-muted-foreground">Value: </span>
-                        <span className="font-medium">{formatINR(itemValue)}</span>
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground mb-0.5">Min Level</p>
+                        <p className="text-sm font-medium">
+                          {item.min_stock_level} {item.unit}
+                        </p>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 border-t border-border pt-2">
+                    {/* Details grid */}
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-0.5">Category</p>
+                        <p className="text-sm font-medium">{category?.name || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-0.5">Value</p>
+                        <p className="text-sm font-medium">{formatINR(itemValue)}</p>
+                      </div>
+                      {item.storage_location && (
+                        <div className="col-span-2">
+                          <p className="text-xs text-muted-foreground mb-0.5">Location</p>
+                          <p className="text-sm font-medium">{item.storage_location}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Stock In / Out buttons */}
+                    <div className="flex items-center gap-2 border-t border-border pt-2.5">
                       <Button
                         variant="outline"
                         size="sm"
-                        className="flex-1 text-green-600 hover:text-green-700 hover:bg-green-50"
+                        className="flex-1 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200"
                         onClick={() => handleStockClick(item, "in")}
-                        title="Stock In"
                       >
-                        <ArrowUp className="mr-1 size-4" />
-                        In
+                        <ArrowUp className="mr-1.5 size-4" />
+                        Stock In
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
                         onClick={() => handleStockClick(item, "out")}
-                        title="Stock Out"
                       >
-                        <ArrowDown className="mr-1 size-4" />
-                        Out
+                        <ArrowDown className="mr-1.5 size-4" />
+                        Stock Out
                       </Button>
                     </div>
                   </CardContent>
