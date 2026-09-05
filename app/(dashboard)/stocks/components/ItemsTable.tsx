@@ -415,7 +415,6 @@ export default function ItemsTable({
             filteredItems.map((item) => {
               const stockStatus = getStockStatus(item.current_stock, item.min_stock_level)
               const category = categories.find((c) => c.id === item.category_id)
-              const itemValue = item.current_stock * item.purchase_price
 
               return (
                 <Card key={item.id} className="relative">
@@ -472,7 +471,7 @@ export default function ItemsTable({
                   </CardHeader>
 
                   <CardContent className="space-y-3">
-                    {/* Stock level — prominent highlight box */}
+                    {/* Stock level — prominent highlight box (min level removed) */}
                     <div className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2.5">
                       <div>
                         <p className="text-xs text-muted-foreground mb-0.5">Current Stock</p>
@@ -481,12 +480,7 @@ export default function ItemsTable({
                           <span className="text-sm font-normal text-muted-foreground">{item.unit}</span>
                         </p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-xs text-muted-foreground mb-0.5">Min Level</p>
-                        <p className="text-sm font-medium">
-                          {item.min_stock_level} {item.unit}
-                        </p>
-                      </div>
+                      {/* Removed min level display entirely */}
                     </div>
 
                     {/* Details grid */}
@@ -496,8 +490,8 @@ export default function ItemsTable({
                         <p className="text-sm font-medium">{category?.name || "—"}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground mb-0.5">Value</p>
-                        <p className="text-sm font-medium">{formatINR(itemValue)}</p>
+                        <p className="text-xs text-muted-foreground mb-0.5">Selling Price</p>
+                        <p className="text-sm font-medium">{formatINR(item.selling_price)}</p>
                       </div>
                       {item.storage_location && (
                         <div className="col-span-2">
