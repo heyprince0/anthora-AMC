@@ -92,8 +92,6 @@ export default function QuotationsPage() {
     }
   }, [currentOrgId])
 
-  // ✅ REMOVED auto-show on page load – modal only from button
-
   const handleFilter = () => {
     let filtered = quotations
     if (searchTerm) {
@@ -154,7 +152,6 @@ export default function QuotationsPage() {
     }
   }
 
-  // ✅ Check limits – only called from New Quotation button
   const checkAndShowLimitModal = () => {
     if (status === 'expired' || status === 'cancelled') {
       setLimitModalType('expired')
@@ -180,18 +177,13 @@ export default function QuotationsPage() {
   const handleNewQuotationClick = async () => {
     if (!user?.id || !currentOrgId) return
 
-    // ✅ Don't let the click through until we actually know the plan status.
-    // Without this, a fast click right after page load could sneak past the
-    // expired/limit check because `status` hasn't been fetched yet.
     if (limitsLoading) {
       toast.error("Checking your plan status, please try again in a moment...")
       return
     }
 
-    // ✅ Check limits before anything else
     if (checkAndShowLimitModal()) return
 
-    // Then check company profile
     setCheckingProfile(true)
     try {
       const { data, error } = await supabase
@@ -215,7 +207,6 @@ export default function QuotationsPage() {
       }
     } catch (error) {
       console.error("Error checking company profile:", error)
-      // Fail open — don't block quotation creation if the check itself fails
       router.push("/quotations/new")
     } finally {
       setCheckingProfile(false)
@@ -275,8 +266,8 @@ export default function QuotationsPage() {
           </CardContent>
         </Card>
 
-        {/* Quotations Table */}
-        <Card>
+        {/* Desktop: All Quotations Table */}
+        <Card className="hidden md:block">
           <CardHeader>
             <CardTitle>All Quotations</CardTitle>
             <CardDescription>
@@ -291,178 +282,174 @@ export default function QuotationsPage() {
                 {quotations.length === 0 ? "No quotations yet. Create your first quotation!" : "No quotations matching your filters"}
               </div>
             ) : (
-              <>
-                {/* Desktop Table */}
-                <div className="hidden md:block overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Quote No</TableHead>
-                        <TableHead>Client Name</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Grand Total</TableHead>
-                        <TableHead className="w-[80px]">Actions</TableHead>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Quote No</TableHead>
+                      <TableHead>Client Name</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Grand Total</TableHead>
+                      <TableHead className="w-[80px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredQuotations.map((quotation) => (
+                      <TableRow key={quotation.id}>
+                        <TableCell className="font-medium">{quotation.quote_no}</TableCell>
+                        <TableCell>{quotation.client_name}</TableCell>
+                        <TableCell>
+                          {new Date(quotation.created_at).toLocaleDateString("en-IN", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </TableCell>
+                        <TableCell>{formatCurrency(quotation.grand_total)}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Link href={`/quotations/${quotation.id}`}>
+                              <Button variant="ghost" size="sm" title="View Quotation">
+                                <Eye className="size-4" />
+                                <span className="sr-only">View</span>
+                              </Button>
+                            </Link>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <MoreHorizontal className="size-4" />
+                                  <span className="sr-only">More actions</span>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleEditClick(quotation)}>
+                                  <Edit className="mr-2 size-4" />
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-red-600 focus:text-red-600"
+                                  onClick={() => { setQuotationToDelete(quotation); setDeleteDialogOpen(true) }}
+                                >
+                                  <Trash2 className="mr-2 size-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredQuotations.map((quotation) => (
-                        <TableRow key={quotation.id}>
-                          <TableCell className="font-medium">{quotation.quote_no}</TableCell>
-                          <TableCell>{quotation.client_name}</TableCell>
-                          <TableCell>
-                            {new Date(quotation.created_at).toLocaleDateString("en-IN", {
-                              day: "2-digit",
-                              month: "short",
-                              year: "numeric",
-                            })}
-                          </TableCell>
-                          <TableCell>{formatCurrency(quotation.grand_total)}</TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Link href={`/quotations/${quotation.id}`}>
-                                <Button variant="ghost" size="sm" title="View Quotation">
-                                  <Eye className="size-4" />
-                                  <span className="sr-only">View</span>
-                                </Button>
-                              </Link>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm">
-                                    <MoreHorizontal className="size-4" />
-                                    <span className="sr-only">More actions</span>
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => handleEditClick(quotation)}>
-                                    <Edit className="mr-2 size-4" />
-                                    Edit
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    className="text-red-600 focus:text-red-600"
-                                    onClick={() => { setQuotationToDelete(quotation); setDeleteDialogOpen(true) }}
-                                  >
-                                    <Trash2 className="mr-2 size-4" />
-                                    Delete
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-
-                {/* Mobile Card View - new design matching Contracts page */}
-                <div className="flex flex-col gap-4 md:hidden">
-                  {filteredQuotations.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">No quotations found</div>
-                  ) : (
-                    <>
-                      <p className="text-sm text-muted-foreground">
-                        You have{" "}
-                        <span className="font-medium text-foreground">{filteredQuotations.length}</span>{" "}
-                        quotations{" "}
-                        {searchTerm ? 'matching filters' : 'in total'}
-                      </p>
-
-                      {filteredQuotations.map((quotation) => (
-                        <Card key={quotation.id} className="relative">
-                          <CardHeader className="pb-3">
-                            <div className="flex items-start justify-between gap-2">
-                              {/* Left: icon + quote_no + client */}
-                              <div className="flex items-center gap-3 min-w-0">
-                                <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                                  <FileText className="size-5 text-primary" />
-                                </div>
-                                <div className="min-w-0">
-                                  <CardTitle className="text-sm font-semibold leading-tight truncate">
-                                    {quotation.quote_no}
-                                  </CardTitle>
-                                  <CardDescription className="text-xs truncate mt-0.5">
-                                    {quotation.client_name || 'No client'}
-                                  </CardDescription>
-                                </div>
-                              </div>
-
-                              {/* Right: actions dropdown */}
-                              <div className="flex items-center gap-1 shrink-0">
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="size-8">
-                                      <MoreHorizontal className="size-4" />
-                                      <span className="sr-only">Actions</span>
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => handleEditClick(quotation)}>
-                                      <Edit className="mr-2 size-4" />
-                                      Edit
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      onClick={() => { setQuotationToDelete(quotation); setDeleteDialogOpen(true) }}
-                                      className="text-red-600 focus:text-red-600"
-                                    >
-                                      <Trash2 className="mr-2 size-4" />
-                                      Delete
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </div>
-                            </div>
-                          </CardHeader>
-
-                          <CardContent className="space-y-3">
-                            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                              <div>
-                                <p className="text-xs text-muted-foreground mb-0.5">Quote No</p>
-                                <p className="text-sm font-medium">{quotation.quote_no}</p>
-                              </div>
-                              <div>
-                                <p className="text-xs text-muted-foreground mb-0.5">Client</p>
-                                <p className="text-sm font-medium truncate">{quotation.client_name || '—'}</p>
-                              </div>
-                              <div>
-                                <p className="text-xs text-muted-foreground mb-0.5">Date</p>
-                                <p className="text-sm font-medium">
-                                  {new Date(quotation.created_at).toLocaleDateString("en-IN", {
-                                    day: "2-digit",
-                                    month: "short",
-                                    year: "numeric",
-                                  })}
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-xs text-muted-foreground mb-0.5">Grand Total</p>
-                                <p className="text-sm font-medium">{formatCurrency(quotation.grand_total)}</p>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center justify-between pt-2 border-t border-border">
-                              <div className="text-xs text-muted-foreground truncate">
-                                {/* optional extra info – left empty for now */}
-                                &nbsp;
-                              </div>
-                              <Link href={`/quotations/${quotation.id}`}>
-                                <Button variant="ghost" size="sm" className="gap-2 shrink-0">
-                                  <Eye className="size-4" />
-                                  View
-                                </Button>
-                              </Link>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </>
-                  )}
-                </div>
-              </>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
         </Card>
+
+        {/* Mobile: Quotation Cards */}
+        <div className="flex flex-col gap-4 md:hidden">
+          {loading ? (
+            <div className="text-center py-8 text-muted-foreground">Loading quotations...</div>
+          ) : filteredQuotations.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              {quotations.length === 0 ? "No quotations yet. Create your first quotation!" : "No quotations matching your filters"}
+            </div>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground">
+                You have{" "}
+                <span className="font-medium text-foreground">{filteredQuotations.length}</span>{" "}
+                quotations{" "}
+                {searchTerm ? 'matching filters' : 'in total'}
+              </p>
+
+              {filteredQuotations.map((quotation) => (
+                <Card key={quotation.id} className="relative">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                          <FileText className="size-5 text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                          <CardTitle className="text-sm font-semibold leading-tight truncate">
+                            {quotation.quote_no}
+                          </CardTitle>
+                          <CardDescription className="text-xs truncate mt-0.5">
+                            {quotation.client_name || 'No client'}
+                          </CardDescription>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="size-8">
+                              <MoreHorizontal className="size-4" />
+                              <span className="sr-only">Actions</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEditClick(quotation)}>
+                              <Edit className="mr-2 size-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => { setQuotationToDelete(quotation); setDeleteDialogOpen(true) }}
+                              className="text-red-600 focus:text-red-600"
+                            >
+                              <Trash2 className="mr-2 size-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-0.5">Quote No</p>
+                        <p className="text-sm font-medium">{quotation.quote_no}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-0.5">Client</p>
+                        <p className="text-sm font-medium truncate">{quotation.client_name || '—'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-0.5">Date</p>
+                        <p className="text-sm font-medium">
+                          {new Date(quotation.created_at).toLocaleDateString("en-IN", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-0.5">Grand Total</p>
+                        <p className="text-sm font-medium">{formatCurrency(quotation.grand_total)}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between pt-2 border-t border-border">
+                      <div className="text-xs text-muted-foreground truncate">
+                        &nbsp;
+                      </div>
+                      <Link href={`/quotations/${quotation.id}`}>
+                        <Button variant="ghost" size="sm" className="gap-2 shrink-0">
+                          <Eye className="size-4" />
+                          View
+                        </Button>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </>
+          )}
+        </div>
       </div>
 
+      {/* Dialogs and Modals - unchanged */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -505,7 +492,6 @@ export default function QuotationsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Subscription Alert Modal */}
       <Dialog open={subscriptionAlertOpen} onOpenChange={setSubscriptionAlertOpen}>
         <DialogContent>
           <DialogHeader>
@@ -522,7 +508,6 @@ export default function QuotationsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Limit Reached Modal – only from button */}
       <LimitReachedModal
         isOpen={showLimitModal}
         onClose={() => setShowLimitModal(false)}
