@@ -225,346 +225,349 @@ export default function ItemsTable({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Inventory Items</CardTitle>
-        <CardDescription>Manage your inventory and track stock levels</CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        {/* Filters */}
-        <div className="flex flex-col gap-3 md:flex-row md:items-center flex-wrap">
-          <div className="relative flex-1 min-w-[150px]">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search by name, SKU, or brand..."
-              className="pl-10"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-[130px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="in-stock">In Stock</SelectItem>
-                <SelectItem value="low">Low Stock</SelectItem>
-                <SelectItem value="out">Out of Stock</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={filterCategory} onValueChange={setFilterCategory}>
-              <SelectTrigger className="w-[130px]">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={filterLocation} onValueChange={setFilterLocation}>
-              <SelectTrigger className="w-[130px]">
-                <SelectValue placeholder="Location" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Locations</SelectItem>
-                {locations.map((loc) => (
-                  <SelectItem key={loc} value={loc}>
-                    {loc}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Add Item button — visible on desktop only; mobile uses the FAB */}
-            <Button onClick={onAddItem} className="hidden md:inline-flex">
-              <Plus className="mr-2 size-4" />
-              Add Item
-            </Button>
-          </div>
-        </div>
-
-        {/* ── DESKTOP: Table view (unchanged) ── */}
-        <div className="hidden md:block border rounded-lg overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>SKU</TableHead>
-                <TableHead>Brand</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead className="text-right">Stock</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Value</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                    Loading inventory items...
-                  </TableCell>
-                </TableRow>
-              ) : filteredItems.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                    {searchTerm || filterStatus !== "all" || filterCategory !== "all" || filterLocation !== "all"
-                      ? "No items found matching filters"
-                      : "No inventory items yet"}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredItems.map((item) => {
-                  const stockStatus = getStockStatus(item.current_stock, item.min_stock_level)
-                  const category = categories.find((c) => c.id === item.category_id)
-                  const itemValue = item.current_stock * item.purchase_price
-
-                  return (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">{item.name}</TableCell>
-                      <TableCell className="text-muted-foreground text-sm">{item.sku || "—"}</TableCell>
-                      <TableCell className="text-sm">{item.brand || "—"}</TableCell>
-                      <TableCell className="text-sm">{category?.name || "—"}</TableCell>
-                      <TableCell className="text-right">
-                        {item.current_stock} {item.unit}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={`${stockStatus.color}`}>{stockStatus.status}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right text-sm">{formatINR(itemValue)}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                            onClick={() => handleStockClick(item, "in")}
-                            title="Stock In"
-                          >
-                            <ArrowUp className="mr-1 size-4" />
-                            In
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => handleStockClick(item, "out")}
-                            title="Stock Out"
-                          >
-                            <ArrowDown className="mr-1 size-4" />
-                            Out
-                          </Button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="size-8">
-                                <MoreHorizontal className="size-4" />
-                                <span className="sr-only">Actions</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => onEditItem(item)}>
-                                <Edit className="mr-2 size-4" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleHistoryClick(item)}>
-                                <History className="mr-2 size-4" />
-                                History
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setItemToDelete(item)
-                                  setDeleteDialogOpen(true)
-                                }}
-                                className="text-red-600"
-                              >
-                                <Trash2 className="mr-2 size-4" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* ── MOBILE: Individual item cards ── */}
-        <div className="flex flex-col gap-4 md:hidden">
-          {loading ? (
-            <div className="text-center py-8 text-muted-foreground">Loading inventory items...</div>
-          ) : filteredItems.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              {searchTerm || filterStatus !== "all" || filterCategory !== "all" || filterLocation !== "all"
-                ? "No items found matching filters"
-                : "No inventory items yet"}
+    <div className="flex flex-col gap-6">
+      {/* ── Filter Bar ── */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center flex-wrap">
+            <div className="relative flex-1 min-w-[150px]">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search by name, SKU, or brand..."
+                className="pl-10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
-          ) : (
-            filteredItems.map((item) => {
-              const stockStatus = getStockStatus(item.current_stock, item.min_stock_level)
-              const category = categories.find((c) => c.id === item.category_id)
+            <div className="flex gap-2 flex-wrap">
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-[130px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="in-stock">In Stock</SelectItem>
+                  <SelectItem value="low">Low Stock</SelectItem>
+                  <SelectItem value="out">Out of Stock</SelectItem>
+                </SelectContent>
+              </Select>
 
-              return (
-                <Card key={item.id} className="relative">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between gap-2">
-                      {/* Left: icon + name + SKU/brand */}
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                          <Package className="size-5 text-primary" />
-                        </div>
-                        <div className="min-w-0">
-                          <CardTitle className="text-sm font-semibold leading-tight truncate">
-                            {item.name}
-                          </CardTitle>
-                          <CardDescription className="text-xs truncate mt-0.5">
-                            {item.sku || "—"}{item.brand ? ` · ${item.brand}` : ""}
-                          </CardDescription>
-                        </div>
-                      </div>
+              <Select value={filterCategory} onValueChange={setFilterCategory}>
+                <SelectTrigger className="w-[130px]">
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-                      {/* Right: status badge + 3-dot menu */}
-                      <div className="flex items-center gap-1 shrink-0">
-                        <Badge className={stockStatus.color}>{stockStatus.status}</Badge>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="size-8">
-                              <MoreHorizontal className="size-4" />
-                              <span className="sr-only">Actions</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => onEditItem(item)}>
-                              <Edit className="mr-2 size-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleHistoryClick(item)}>
-                              <History className="mr-2 size-4" />
-                              History
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setItemToDelete(item)
-                                setDeleteDialogOpen(true)
-                              }}
-                              className="text-red-600"
+              <Select value={filterLocation} onValueChange={setFilterLocation}>
+                <SelectTrigger className="w-[130px]">
+                  <SelectValue placeholder="Location" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Locations</SelectItem>
+                  {locations.map((loc) => (
+                    <SelectItem key={loc} value={loc}>
+                      {loc}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Button onClick={onAddItem}>
+                <Plus className="mr-2 size-4" />
+                Add Item
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── DESKTOP: Table (hidden on mobile) ── */}
+      <Card className="hidden md:block">
+        <CardHeader>
+          <CardTitle>Inventory Items</CardTitle>
+          <CardDescription>Manage your inventory and track stock levels</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="border rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>SKU</TableHead>
+                  <TableHead>Brand</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead className="text-right">Stock</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Value</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      Loading inventory items...
+                    </TableCell>
+                  </TableRow>
+                ) : filteredItems.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      {searchTerm || filterStatus !== "all" || filterCategory !== "all" || filterLocation !== "all"
+                        ? "No items found matching filters"
+                        : "No inventory items yet"}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredItems.map((item) => {
+                    const stockStatus = getStockStatus(item.current_stock, item.min_stock_level)
+                    const category = categories.find((c) => c.id === item.category_id)
+                    const itemValue = item.current_stock * item.purchase_price
+
+                    return (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium">{item.name}</TableCell>
+                        <TableCell className="text-muted-foreground text-sm">{item.sku || "—"}</TableCell>
+                        <TableCell className="text-sm">{item.brand || "—"}</TableCell>
+                        <TableCell className="text-sm">{category?.name || "—"}</TableCell>
+                        <TableCell className="text-right">
+                          {item.current_stock} {item.unit}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={`${stockStatus.color}`}>{stockStatus.status}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right text-sm">{formatINR(itemValue)}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                              onClick={() => handleStockClick(item, "in")}
+                              title="Stock In"
                             >
-                              <Trash2 className="mr-2 size-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                              <ArrowUp className="mr-1 size-4" />
+                              In
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => handleStockClick(item, "out")}
+                              title="Stock Out"
+                            >
+                              <ArrowDown className="mr-1 size-4" />
+                              Out
+                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="size-8">
+                                  <MoreHorizontal className="size-4" />
+                                  <span className="sr-only">Actions</span>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => onEditItem(item)}>
+                                  <Edit className="mr-2 size-4" />
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleHistoryClick(item)}>
+                                  <History className="mr-2 size-4" />
+                                  History
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setItemToDelete(item)
+                                    setDeleteDialogOpen(true)
+                                  }}
+                                  className="text-red-600"
+                                >
+                                  <Trash2 className="mr-2 size-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── MOBILE: Individual item cards ── */}
+      <div className="flex flex-col gap-4 md:hidden">
+        {loading ? (
+          <div className="text-center py-8 text-muted-foreground">Loading inventory items...</div>
+        ) : filteredItems.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            {searchTerm || filterStatus !== "all" || filterCategory !== "all" || filterLocation !== "all"
+              ? "No items found matching filters"
+              : "No inventory items yet"}
+          </div>
+        ) : (
+          filteredItems.map((item) => {
+            const stockStatus = getStockStatus(item.current_stock, item.min_stock_level)
+            const category = categories.find((c) => c.id === item.category_id)
+
+            return (
+              <Card key={item.id} className="relative">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-2">
+                    {/* Left: icon + name + SKU/brand */}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <Package className="size-5 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <CardTitle className="text-sm font-semibold leading-tight truncate">
+                          {item.name}
+                        </CardTitle>
+                        <CardDescription className="text-xs truncate mt-0.5">
+                          {item.sku || "—"}{item.brand ? ` · ${item.brand}` : ""}
+                        </CardDescription>
                       </div>
                     </div>
-                  </CardHeader>
 
-                  <CardContent className="space-y-3">
-                    {/* Stock level — prominent highlight box (min level removed) */}
-                    <div className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2.5">
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-0.5">Current Stock</p>
-                        <p className="text-lg font-bold leading-none">
-                          {item.current_stock}{" "}
-                          <span className="text-sm font-normal text-muted-foreground">{item.unit}</span>
-                        </p>
-                      </div>
-                      {/* Removed min level display entirely */}
+                    {/* Right: status badge + 3-dot menu */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Badge className={stockStatus.color}>{stockStatus.status}</Badge>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="size-8">
+                            <MoreHorizontal className="size-4" />
+                            <span className="sr-only">Actions</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => onEditItem(item)}>
+                            <Edit className="mr-2 size-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleHistoryClick(item)}>
+                            <History className="mr-2 size-4" />
+                            History
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setItemToDelete(item)
+                              setDeleteDialogOpen(true)
+                            }}
+                            className="text-red-600"
+                          >
+                            <Trash2 className="mr-2 size-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
+                  </div>
+                </CardHeader>
 
-                    {/* Details grid */}
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-0.5">Category</p>
-                        <p className="text-sm font-medium">{category?.name || "—"}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-0.5">Selling Price</p>
-                        <p className="text-sm font-medium">{formatINR(item.selling_price)}</p>
-                      </div>
-                      {item.storage_location && (
-                        <div className="col-span-2">
-                          <p className="text-xs text-muted-foreground mb-0.5">Location</p>
-                          <p className="text-sm font-medium">{item.storage_location}</p>
-                        </div>
-                      )}
+                <CardContent className="space-y-3">
+                  {/* Stock level — prominent highlight box (min level removed) */}
+                  <div className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2.5">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-0.5">Current Stock</p>
+                      <p className="text-lg font-bold leading-none">
+                        {item.current_stock}{" "}
+                        <span className="text-sm font-normal text-muted-foreground">{item.unit}</span>
+                      </p>
                     </div>
+                    {/* Min level removed */}
+                  </div>
 
-                    {/* Stock In / Out buttons */}
-                    <div className="flex items-center gap-2 border-t border-border pt-2.5">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200"
-                        onClick={() => handleStockClick(item, "in")}
-                      >
-                        <ArrowUp className="mr-1.5 size-4" />
-                        Stock In
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-                        onClick={() => handleStockClick(item, "out")}
-                      >
-                        <ArrowDown className="mr-1.5 size-4" />
-                        Stock Out
-                      </Button>
+                  {/* Details grid */}
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-0.5">Category</p>
+                      <p className="text-sm font-medium">{category?.name || "—"}</p>
                     </div>
-                  </CardContent>
-                </Card>
-              )
-            })
-          )}
-        </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-0.5">Selling Price</p>
+                      <p className="text-sm font-medium">{formatINR(item.selling_price)}</p>
+                    </div>
+                    {item.storage_location && (
+                      <div className="col-span-2">
+                        <p className="text-xs text-muted-foreground mb-0.5">Location</p>
+                        <p className="text-sm font-medium">{item.storage_location}</p>
+                      </div>
+                    )}
+                  </div>
 
-        {/* Stock In/Out Dialog */}
-        <StockInOutDialog
-          open={stockDialogOpen}
-          onOpenChange={setStockDialogOpen}
-          item={selectedItem}
-          mode={stockDialogMode}
-          orgId={orgId}
-          onSuccess={handleStockSuccess}
-        />
+                  {/* Stock In / Out buttons */}
+                  <div className="flex items-center gap-2 border-t border-border pt-2.5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200"
+                      onClick={() => handleStockClick(item, "in")}
+                    >
+                      <ArrowUp className="mr-1.5 size-4" />
+                      Stock In
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                      onClick={() => handleStockClick(item, "out")}
+                    >
+                      <ArrowDown className="mr-1.5 size-4" />
+                      Stock Out
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })
+        )}
+      </div>
 
-        {/* Stock History Dialog */}
-        <StockHistoryDialog
-          open={historyDialogOpen}
-          onOpenChange={setHistoryDialogOpen}
-          item={historyItem}
-          orgId={orgId}
-        />
+      {/* Dialogs (unchanged) */}
+      <StockInOutDialog
+        open={stockDialogOpen}
+        onOpenChange={setStockDialogOpen}
+        item={selectedItem}
+        mode={stockDialogMode}
+        orgId={orgId}
+        onSuccess={handleStockSuccess}
+      />
 
-        {/* Delete Confirmation Dialog */}
-        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Item</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to delete &quot;{itemToDelete?.name}&quot;? This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-red-600">
-                {deleting ? "Deleting..." : "Delete"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </CardContent>
-    </Card>
+      <StockHistoryDialog
+        open={historyDialogOpen}
+        onOpenChange={setHistoryDialogOpen}
+        item={historyItem}
+        orgId={orgId}
+      />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Item</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{itemToDelete?.name}&quot;? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-red-600">
+              {deleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   )
 }
