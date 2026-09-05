@@ -43,7 +43,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { supabase, type Contract, type Customer, getDaysUntilService } from "@/lib/supabase"
 import { useAuth } from "@/lib/auth-context"
-import { Plus, Search, Edit, Trash2, Download, Eye, Check, ChevronsUpDown, MoreHorizontal } from "lucide-react"
+import { Plus, Search, Edit, Trash2, Download, Eye, Check, ChevronsUpDown, MoreHorizontal, FileText } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -617,9 +617,7 @@ export default function ContractsPage() {
                   </SelectContent>
                 </Select>
 
-                {/* Location Filter — searchable combobox. Options populate
-                    automatically from whatever locations users have entered
-                    on their contracts; typing filters the list live. */}
+                {/* Location Filter — searchable combobox */}
                 <Popover open={locationPopoverOpen} onOpenChange={setLocationPopoverOpen}>
                   <PopoverTrigger asChild>
                     <Button
@@ -683,8 +681,8 @@ export default function ContractsPage() {
           </CardContent>
         </Card>
 
-        {/* Contracts Table */}
-        <Card className="min-w-0 w-full">
+        {/* ── DESKTOP: All Contracts table (unchanged) ── */}
+        <Card className="hidden md:block min-w-0 w-full">
           <CardHeader>
             <CardTitle>All Contracts</CardTitle>
             <CardDescription>
@@ -697,145 +695,129 @@ export default function ContractsPage() {
             ) : filteredContracts.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">No contracts found</div>
             ) : (
-              <>
-                {/* Desktop / tablet table view - unchanged */}
-                <div className="hidden md:block w-full min-w-0 overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Contract Name</TableHead>
-                        <TableHead>Customer</TableHead>
-                        <TableHead>Frequency</TableHead>
-                        <TableHead>Price</TableHead>
-                        <TableHead>Contract End</TableHead>
-                        <TableHead>Last Service</TableHead>
-                        <TableHead>Next Service</TableHead>
-                        <TableHead>Status</TableHead>
-                        {/* Hide Actions column for technicians */}
-                        {!isTechnician && <TableHead className="w-[70px]">Actions</TableHead>}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredContracts.map((contract) => {
-                        const days = getDaysUntilService(contract.next_service_date)
-                        const frequencyMonths = Math.round(contract.frequency_days / 30)
-                        return (
-                          <TableRow key={contract.id}>
-                            <TableCell className="font-medium">{contract.contract_name}</TableCell>
-                            <TableCell>{contract.customerName}</TableCell>
-                            <TableCell>{frequencyMonths} months</TableCell>
+              <div className="w-full min-w-0 overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Contract Name</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Frequency</TableHead>
+                      <TableHead>Price</TableHead>
+                      <TableHead>Contract End</TableHead>
+                      <TableHead>Last Service</TableHead>
+                      <TableHead>Next Service</TableHead>
+                      <TableHead>Status</TableHead>
+                      {!isTechnician && <TableHead className="w-[70px]">Actions</TableHead>}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredContracts.map((contract) => {
+                      const days = getDaysUntilService(contract.next_service_date)
+                      const frequencyMonths = Math.round(contract.frequency_days / 30)
+                      return (
+                        <TableRow key={contract.id}>
+                          <TableCell className="font-medium">{contract.contract_name}</TableCell>
+                          <TableCell>{contract.customerName}</TableCell>
+                          <TableCell>{frequencyMonths} months</TableCell>
+                          <TableCell>
+                            {contract.contracts_price != null
+                              ? `₹${contract.contracts_price.toLocaleString('en-IN')}`
+                              : '—'}
+                          </TableCell>
+                          <TableCell>{formatTableDate(contract.endDate)}</TableCell>
+                          <TableCell>{formatTableDate(contract.start_date)}</TableCell>
+                          <TableCell>{formatTableDate(contract.next_service_date)}</TableCell>
+                          <TableCell>{getStatusBadge(days, contract.status)}</TableCell>
+                          {!isTechnician && (
                             <TableCell>
-                              {contract.contracts_price != null
-                                ? `₹${contract.contracts_price.toLocaleString('en-IN')}`
-                                : '—'}
-                            </TableCell>
-                            <TableCell>{formatTableDate(contract.endDate)}</TableCell>
-                            <TableCell>{formatTableDate(contract.start_date)}</TableCell>
-                            <TableCell>{formatTableDate(contract.next_service_date)}</TableCell>
-                            <TableCell>{getStatusBadge(days, contract.status)}</TableCell>
-                            {/* Hide Actions cell for technicians */}
-                            {!isTechnician && (
-                              <TableCell>
-                                <div className="flex items-center gap-1">
-                                  <Link href={`/contracts/${contract.id}`}>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      title="View Contract Details"
-                                    >
-                                      <Eye className="size-4" />
-                                      <span className="sr-only">View</span>
+                              <div className="flex items-center gap-1">
+                                <Link href={`/contracts/${contract.id}`}>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    title="View Contract Details"
+                                  >
+                                    <Eye className="size-4" />
+                                    <span className="sr-only">View</span>
+                                  </Button>
+                                </Link>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="size-8">
+                                      <MoreHorizontal className="size-4" />
+                                      <span className="sr-only">Actions</span>
                                     </Button>
-                                  </Link>
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button variant="ghost" size="icon" className="size-8">
-                                        <MoreHorizontal className="size-4" />
-                                        <span className="sr-only">Actions</span>
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      <DropdownMenuItem onClick={() => handleEditClick(contract)}>
-                                        <Edit className="mr-2 size-4" />
-                                        Edit
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        onClick={() => { setContractToDelete(contract); setDeleteDialogOpen(true) }}
-                                        className="text-red-600"
-                                      >
-                                        <Trash2 className="mr-2 size-4" />
-                                        Delete
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                </div>
-                              </TableCell>
-                            )}
-                          </TableRow>
-                        )
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => handleEditClick(contract)}>
+                                      <Edit className="mr-2 size-4" />
+                                      Edit
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() => { setContractToDelete(contract); setDeleteDialogOpen(true) }}
+                                      className="text-red-600"
+                                    >
+                                      <Trash2 className="mr-2 size-4" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-                {/* Mobile card view - compact, same data as the table above */}
-                <div className="flex flex-col gap-2.5 md:hidden">
-                  {filteredContracts.map((contract) => {
-                    const days = getDaysUntilService(contract.next_service_date)
-                    const frequencyMonths = Math.round(contract.frequency_days / 30)
-                    return (
-                      <div
-                        key={contract.id}
-                        className="rounded-lg border bg-card p-3 min-w-0"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium truncate">{contract.contract_name}</p>
-                            <p className="text-xs text-muted-foreground truncate">{contract.customerName}</p>
-                          </div>
-                          <div className="shrink-0">{getStatusBadge(days, contract.status)}</div>
-                        </div>
+        {/* ── MOBILE: Individual contract cards (new design) ── */}
+        <div className="flex flex-col gap-4 md:hidden">
+          {loading ? (
+            <div className="text-center py-8 text-muted-foreground">Loading contracts...</div>
+          ) : filteredContracts.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">No contracts found</div>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground">
+                You have{" "}
+                <span className="font-medium text-foreground">{filteredContracts.length}</span>{" "}
+                contracts{" "}
+                {filterStatus !== 'all' || filterMonth !== 'all' || filterLocation !== 'all'
+                  ? 'matching filters'
+                  : 'in total'}
+              </p>
 
-                        <div className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
-                          <div className="min-w-0">
-                            <span className="text-muted-foreground">Frequency: </span>
-                            <span className="font-medium">{frequencyMonths} months</span>
+              {filteredContracts.map((contract) => {
+                const days = getDaysUntilService(contract.next_service_date)
+                const frequencyMonths = Math.round(contract.frequency_days / 30)
+                return (
+                  <Card key={contract.id} className="relative">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between gap-2">
+                        {/* Left: icon + name + customer */}
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                            <FileText className="size-5 text-primary" />
                           </div>
                           <div className="min-w-0">
-                            <span className="text-muted-foreground">Price: </span>
-                            <span className="font-medium">
-                              {contract.contracts_price != null
-                                ? `₹${contract.contracts_price.toLocaleString('en-IN')}`
-                                : '—'}
-                            </span>
-                          </div>
-                          <div className="min-w-0">
-                            <span className="text-muted-foreground">Last Service: </span>
-                            <span className="font-medium">{formatShortDate(contract.start_date)}</span>
-                          </div>
-                          <div className="min-w-0">
-                            <span className="text-muted-foreground">Next Service: </span>
-                            <span className="font-medium">{formatShortDate(contract.next_service_date)}</span>
-                          </div>
-                          <div className="col-span-2 min-w-0">
-                            <span className="text-muted-foreground">Contract End: </span>
-                            <span className="font-medium">{contract.endDate || '—'}</span>
+                            <CardTitle className="text-sm font-semibold leading-tight truncate">
+                              {contract.contract_name}
+                            </CardTitle>
+                            <CardDescription className="text-xs truncate mt-0.5">
+                              {contract.customerName}
+                            </CardDescription>
                           </div>
                         </div>
 
-                        {/* Hide Actions row for technicians */}
-                        {!isTechnician && (
-                          <div className="mt-2.5 flex items-center justify-end gap-1 border-t pt-2">
-                            <Link href={`/contracts/${contract.id}`}>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                title="View Contract Details"
-                              >
-                                <Eye className="size-4" />
-                                <span className="sr-only">View</span>
-                              </Button>
-                            </Link>
+                        {/* Right: status badge + 3-dot menu */}
+                        <div className="flex items-center gap-1 shrink-0">
+                          {getStatusBadge(days, contract.status)}
+                          {!isTechnician && (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon" className="size-8">
@@ -857,16 +839,59 @@ export default function ContractsPage() {
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
-                    )
-                  })}
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+                    </CardHeader>
+
+                    <CardContent className="space-y-3">
+                      {/* Details grid — 2 columns */}
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-0.5">Frequency</p>
+                          <p className="text-sm font-medium">{frequencyMonths} months</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-0.5">Price</p>
+                          <p className="text-sm font-medium">
+                            {contract.contracts_price != null
+                              ? `₹${contract.contracts_price.toLocaleString('en-IN')}`
+                              : '—'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-0.5">Last Service</p>
+                          <p className="text-sm font-medium">{formatShortDate(contract.start_date)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-0.5">Next Service</p>
+                          <p className="text-sm font-medium">{formatShortDate(contract.next_service_date)}</p>
+                        </div>
+                        <div className="col-span-2">
+                          <p className="text-xs text-muted-foreground mb-0.5">Contract End</p>
+                          <p className="text-sm font-medium">{contract.endDate || '—'}</p>
+                        </div>
+                      </div>
+
+                      {/* Footer: view button */}
+                      <div className="flex items-center justify-between pt-2 border-t border-border">
+                        <div className="text-xs text-muted-foreground truncate">
+                          {contract.location || ''}
+                        </div>
+                        <Link href={`/contracts/${contract.id}`}>
+                          <Button variant="ghost" size="sm" className="gap-2 shrink-0">
+                            <Eye className="size-4" />
+                            View
+                          </Button>
+                        </Link>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </>
+          )}
+        </div>
 
         {/* Add/Edit Contract Modal */}
         {user && currentOrgId && !isTechnician && (
