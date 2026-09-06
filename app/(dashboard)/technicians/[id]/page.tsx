@@ -752,63 +752,38 @@ export default function TechnicianDetailPage() {
                 </div>
 
                 {/* Mobile card view — same data/actions as the table above, shown only below md */}
-                <div className="space-y-3 md:hidden">
+                <div className="flex flex-col gap-4 md:hidden">
                   {assignedJobs.map((job) => (
-                    <div key={job.id} className="rounded-lg border border-border p-4 space-y-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <h3 className="font-medium text-foreground">{job.title}</h3>
-                        <Badge className="bg-blue-100 text-blue-800 border-blue-200 shrink-0">Pending</Badge>
-                      </div>
-                      <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
-                        <div>
-                          <p className="text-xs text-muted-foreground">Assigned Date</p>
-                          <p className="text-foreground">{job.assigned_date}</p>
+                    <Card key={job.id}>
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                              <Wrench className="size-5 text-primary" />
+                            </div>
+                            <div className="min-w-0">
+                              <CardTitle className="truncate text-sm font-semibold">{job.title}</CardTitle>
+                              <CardDescription className="mt-0.5 truncate text-xs">{job.customerName || 'No customer'}</CardDescription>
+                            </div>
+                          </div>
+                          <Badge className="shrink-0 bg-blue-100 text-blue-800 border-blue-200">Pending</Badge>
                         </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Due Date</p>
-                          <p className="text-foreground">{job.due_date || '—'}</p>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                          <div><p className="text-xs text-muted-foreground">Assigned Date</p><p className="text-sm font-medium">{job.assigned_date}</p></div>
+                          <div><p className="text-xs text-muted-foreground">Due Date</p><p className="text-sm font-medium">{job.due_date || '—'}</p></div>
+                          <div className="col-span-2"><p className="text-xs text-muted-foreground">Notes</p><p className="text-sm font-medium line-clamp-2">{job.notes || '—'}</p></div>
                         </div>
-                        <div className="col-span-2">
-                          <p className="text-xs text-muted-foreground">Customer</p>
-                          <p className="text-foreground">{job.customerName || '—'}</p>
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-2">
+                          <div className="flex flex-wrap gap-2">
+                            <Button size="sm" variant="outline" className="gap-2" onClick={() => openCompleteDialog(job)}><CheckCircle2 className="size-4" />Complete</Button>
+                            {job.customer_id && <Button size="sm" variant="outline" onClick={() => router.push(`/customers/${job.customer_id}`)}>View</Button>}
+                            {role !== 'technician' && <Button size="sm" variant="ghost" className="text-red-600 hover:text-red-600" onClick={() => handleDeleteJob(job.id)}><Trash2 className="size-4" /><span className="sr-only">Delete job</span></Button>}
+                          </div>
                         </div>
-                        <div className="col-span-2">
-                          <p className="text-xs text-muted-foreground">Notes</p>
-                          <p className="text-foreground line-clamp-2">{job.notes || '—'}</p>
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2 pt-1">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="gap-2"
-                          onClick={() => openCompleteDialog(job)}
-                        >
-                          <CheckCircle2 className="size-4" />
-                          Complete
-                        </Button>
-                        {job.customer_id && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="gap-2"
-                            onClick={() => router.push(`/customers/${job.customer_id}`)}
-                          >
-                            View
-                          </Button>
-                        )}
-                        {role !== 'technician' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="gap-2 text-red-600 hover:text-red-600"
-                            onClick={() => handleDeleteJob(job.id)}
-                          >
-                            <Trash2 className="size-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
+                      </CardContent>
+                    </Card>
                   ))}
                 </div>
               </>
