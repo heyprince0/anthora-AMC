@@ -42,8 +42,21 @@ interface StockInOutDialogProps {
   onSuccess: () => void
 }
 
-const OUT_REASONS = ["Used", "Sold", "Returned", "Adjustment", "Damage", "Sample", "Other"]
+// All possible reasons (display names)
+const OUT_REASONS = ["Sold", "Used", "Returned", "Adjustment", "Damage", "Sample", "Other"]
 const IN_REASONS = ["Purchase", "Returned", "Adjustment", "Other"]
+
+// Map to display "Sell" for "Sold" in UI
+const REASON_DISPLAY_MAP: Record<string, string> = {
+  Sold: "Sell",
+  Purchase: "Purchase",
+  Used: "Used",
+  Returned: "Returned",
+  Adjustment: "Adjustment",
+  Damage: "Damage",
+  Sample: "Sample",
+  Other: "Other",
+}
 
 export default function StockInOutDialog({
   open,
@@ -57,7 +70,7 @@ export default function StockInOutDialog({
   const [reason, setReason] = useState("")
   const [notes, setNotes] = useState("")
   const [supplierId, setSupplierId] = useState("")
-  const [customerName, setCustomerName] = useState("")   // <-- simple text
+  const [customerName, setCustomerName] = useState("")
   const [technicianId, setTechnicianId] = useState("")
   const [suppliers, setSuppliers] = useState<Array<{ id: string; name: string }>>([])
   const [technicians, setTechnicians] = useState<Array<{ id: string; name: string }>>([])
@@ -146,13 +159,12 @@ export default function StockInOutDialog({
         item_id: item.id,
         movement_type: mode,
         quantity: quantity,
-        reason: reason,
+        reason: reason, // Store raw reason
         supplier_id: supplierId || null,
         technician_id: technicianId || null,
         notes: notes || null,
       }
 
-      // Add customer_name only for stock out and if filled
       if (mode === "out" && customerName.trim()) {
         movementData.customer_name = customerName.trim()
       }
@@ -174,7 +186,13 @@ export default function StockInOutDialog({
     }
   }
 
-  const reasons = mode === "out" ? OUT_REASONS : IN_REASONS
+  // Determine primary reasons and the rest
+  const allReasons = mode === "out" ? OUT_REASONS : IN_REASONS
+  const primaryReasons = mode === "out" ? ["Sold", "Used"] : ["Purchase"]
+  const otherReasons = allReasons.filter(r => !primaryReasons.includes(r))
+
+  // Get display name for a reason
+  const getDisplayName = (r: string) => REASON_DISPLAY_MAP[r] || r
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -211,21 +229,48 @@ export default function StockInOutDialog({
             />
           </div>
 
-          {/* Reason */}
+          {/* Reason – with primary buttons + dropdown */}
           <div className="flex flex-col gap-2">
-            <Label htmlFor="reason">Reason *</Label>
-            <Select value={reason} onValueChange={setReason}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select reason" />
-              </SelectTrigger>
-              <SelectContent>
-                {reasons.map((r) => (
-                  <SelectItem key={r} value={r}>
-                    {r}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Reason *</Label>
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Primary buttons */}
+              {primaryReasons.map((r) => (
+                <Button
+                  key={r}
+                  type="button"
+                  variant={reason === r ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setReason(r)}
+                  className="flex-1 sm:flex-none"
+                >
+                  {getDisplayName(r)}
+                </Button>
+              ))}
+
+              {/* Dropdown for other reasons */}
+              <Select
+                value={otherReasons.includes(reason) ? reason : ""}
+                onValueChange={(val) => setReason(val)}
+              >
+                <SelectTrigger className="flex-1 sm:flex-none sm:w-[160px]">
+                  <SelectValue placeholder="More reasons" />
+                </SelectTrigger>
+                <SelectContent>
+                  {otherReasons.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {getDisplayName(r)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Show currently selected reason (optional) */}
+            {reason && (
+              <p className="text-sm text-muted-foreground">
+                Selected: <span className="font-medium">{getDisplayName(reason)}</span>
+              </p>
+            )}
           </div>
 
           {/* Supplier (only for Stock In) */}
