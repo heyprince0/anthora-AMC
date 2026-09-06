@@ -252,6 +252,7 @@ export default function InvoicesPage() {
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-6">
+        {/* Page Header */}
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Invoices</h1>
@@ -267,7 +268,7 @@ export default function InvoicesPage() {
           </Button>
         </div>
 
-        {/* ── Standalone Filters (no card) ── */}
+        {/* ── Standalone Filters ── */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -292,8 +293,8 @@ export default function InvoicesPage() {
           </Select>
         </div>
 
-        {/* Invoices Table */}
-        <Card>
+        {/* ── DESKTOP: Table inside a Card ── */}
+        <Card className="hidden md:block">
           <CardHeader>
             <CardTitle>All Invoices</CardTitle>
           </CardHeader>
@@ -314,85 +315,39 @@ export default function InvoicesPage() {
                 )}
               </div>
             ) : (
-              <>
-                <div className="hidden md:block overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Invoice No</TableHead>
-                        <TableHead>Client Name</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Valid Till</TableHead>
-                        <TableHead>Amount</TableHead>
-                        <TableHead>Payment Status</TableHead>
-                        <TableHead className="w-[80px]">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredInvoices.map((invoice) => (
-                        <TableRow key={invoice.id}>
-                          <TableCell className="font-medium">{invoice.invoice_no}</TableCell>
-                          <TableCell>{invoice.client_name}</TableCell>
-                          <TableCell>{formatDate(invoice.invoice_date)}</TableCell>
-                          <TableCell>{formatDate(invoice.due_date)}</TableCell>
-                          <TableCell>{formatCurrency(invoice.grand_total)}</TableCell>
-                          <TableCell>{getPaymentStatusBadge(invoice.payment_status)}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Link href={`/invoices/${invoice.id}`}>
-                                <Button variant="ghost" size="sm">
-                                  <Eye className="size-4" />
-                                  <span className="sr-only">View</span>
-                                </Button>
-                              </Link>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm">
-                                    <MoreHorizontal className="size-4" />
-                                    <span className="sr-only">More actions</span>
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem
-                                    className="text-red-600 focus:text-red-600"
-                                    onClick={() => {
-                                      setInvoiceToDelete(invoice)
-                                      setDeleteDialogOpen(true)
-                                    }}
-                                  >
-                                    <Trash2 className="mr-2 size-4" />
-                                    Delete
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-
-                {/* Mobile card view */}
-                <div className="flex flex-col gap-4 md:hidden">
-                  {filteredInvoices.map((invoice) => (
-                    <Card key={invoice.id}>
-                      <CardHeader className="pb-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex min-w-0 items-center gap-3">
-                            <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                              <FileText className="size-5 text-primary" />
-                            </div>
-                            <div className="min-w-0">
-                              <CardTitle className="truncate text-sm font-semibold">{invoice.invoice_no}</CardTitle>
-                              <CardDescription className="mt-0.5 truncate text-xs">{invoice.client_name}</CardDescription>
-                            </div>
-                          </div>
-                          <div className="flex shrink-0 items-center gap-1">
-                            {getPaymentStatusBadge(invoice.payment_status)}
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Invoice No</TableHead>
+                      <TableHead>Client Name</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Valid Till</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Payment Status</TableHead>
+                      <TableHead className="w-[80px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredInvoices.map((invoice) => (
+                      <TableRow key={invoice.id}>
+                        <TableCell className="font-medium">{invoice.invoice_no}</TableCell>
+                        <TableCell>{invoice.client_name}</TableCell>
+                        <TableCell>{formatDate(invoice.invoice_date)}</TableCell>
+                        <TableCell>{formatDate(invoice.due_date)}</TableCell>
+                        <TableCell>{formatCurrency(invoice.grand_total)}</TableCell>
+                        <TableCell>{getPaymentStatusBadge(invoice.payment_status)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Link href={`/invoices/${invoice.id}`}>
+                              <Button variant="ghost" size="sm">
+                                <Eye className="size-4" />
+                                <span className="sr-only">View</span>
+                              </Button>
+                            </Link>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="size-8">
+                                <Button variant="ghost" size="sm">
                                   <MoreHorizontal className="size-4" />
                                   <span className="sr-only">More actions</span>
                                 </Button>
@@ -411,28 +366,98 @@ export default function InvoicesPage() {
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
-                          <div><p className="text-xs text-muted-foreground">Date</p><p className="text-sm font-medium">{formatDate(invoice.invoice_date)}</p></div>
-                          <div><p className="text-xs text-muted-foreground">Valid Till</p><p className="text-sm font-medium">{formatDate(invoice.due_date)}</p></div>
-                          <div className="col-span-2"><p className="text-xs text-muted-foreground">Amount</p><p className="text-sm font-medium">{formatCurrency(invoice.grand_total)}</p></div>
-                        </div>
-                        <div className="flex items-center justify-between border-t border-border pt-2">
-                          <span className="text-xs text-muted-foreground">Invoice</span>
-                          <Link href={`/invoices/${invoice.id}`}>
-                            <Button variant="ghost" size="sm"><Eye className="mr-2 size-4" />View</Button>
-                          </Link>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
         </Card>
+
+        {/* ── MOBILE: Cards outside the table card ── */}
+        <div className="flex flex-col gap-4 md:hidden">
+          {loading ? (
+            <div className="text-center py-8 text-muted-foreground">Loading invoices...</div>
+          ) : filteredInvoices.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground mb-4">
+                {invoices.length === 0 
+                  ? "No invoices yet. Accept a quotation and convert it to generate your first invoice."
+                  : "No invoices matching your filters"}
+              </p>
+              {invoices.length === 0 && (
+                <Link href="/quotations">
+                  <Button>Go to Quotations</Button>
+                </Link>
+              )}
+            </div>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground">
+                You have{" "}
+                <span className="font-medium text-foreground">{filteredInvoices.length}</span>{" "}
+                invoices{" "}
+                {filterStatus !== "all" || searchTerm ? "matching filters" : "in total"}
+              </p>
+
+              {filteredInvoices.map((invoice) => (
+                <Card key={invoice.id}>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                          <FileText className="size-5 text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                          <CardTitle className="truncate text-sm font-semibold">{invoice.invoice_no}</CardTitle>
+                          <CardDescription className="mt-0.5 truncate text-xs">{invoice.client_name}</CardDescription>
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1">
+                        {getPaymentStatusBadge(invoice.payment_status)}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="size-8">
+                              <MoreHorizontal className="size-4" />
+                              <span className="sr-only">More actions</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              className="text-red-600 focus:text-red-600"
+                              onClick={() => {
+                                setInvoiceToDelete(invoice)
+                                setDeleteDialogOpen(true)
+                              }}
+                            >
+                              <Trash2 className="mr-2 size-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                      <div><p className="text-xs text-muted-foreground">Date</p><p className="text-sm font-medium">{formatDate(invoice.invoice_date)}</p></div>
+                      <div><p className="text-xs text-muted-foreground">Valid Till</p><p className="text-sm font-medium">{formatDate(invoice.due_date)}</p></div>
+                      <div className="col-span-2"><p className="text-xs text-muted-foreground">Amount</p><p className="text-sm font-medium">{formatCurrency(invoice.grand_total)}</p></div>
+                    </div>
+                    <div className="flex items-center justify-between border-t border-border pt-2">
+                      <span className="text-xs text-muted-foreground">Invoice</span>
+                      <Link href={`/invoices/${invoice.id}`}>
+                        <Button variant="ghost" size="sm"><Eye className="mr-2 size-4" />View</Button>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </>
+          )}
+        </div>
 
         {/* Delete Dialog */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -467,6 +492,7 @@ export default function InvoicesPage() {
         />
       </div>
 
+      {/* Profile Setup Dialog */}
       <Dialog open={profileSetupDialogOpen} onOpenChange={setProfileSetupDialogOpen}>
         <DialogContent>
           <DialogHeader>
