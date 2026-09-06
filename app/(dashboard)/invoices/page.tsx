@@ -44,7 +44,7 @@ import { supabase, type Invoice } from "@/lib/supabase"
 import { useAuth } from "@/lib/auth-context"
 import { usePlanLimits } from "@/lib/hooks/use-plan-limits"
 import LimitReachedModal from "@/components/billing/limit-reached-modal"
-import { Plus, Search, Eye, Trash2, Settings, MoreHorizontal } from "lucide-react"
+import { Plus, Search, Eye, Trash2, Settings, MoreHorizontal, FileText } from "lucide-react"
 import Link from "next/link"
 import { toast } from "sonner"
 import {
@@ -387,62 +387,60 @@ export default function InvoicesPage() {
                   </Table>
                 </div>
 
-                {/* Mobile card view - compact, same data as the table above */}
-                <div className="flex flex-col gap-2.5 md:hidden">
+                {/* Mobile card view */}
+                <div className="flex flex-col gap-4 md:hidden">
                   {filteredInvoices.map((invoice) => (
-                    <div key={invoice.id} className="rounded-lg border bg-card p-3 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{invoice.invoice_no}</p>
-                          <p className="text-xs text-muted-foreground truncate">{invoice.client_name}</p>
+                    <Card key={invoice.id}>
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                              <FileText className="size-5 text-primary" />
+                            </div>
+                            <div className="min-w-0">
+                              <CardTitle className="truncate text-sm font-semibold">{invoice.invoice_no}</CardTitle>
+                              <CardDescription className="mt-0.5 truncate text-xs">{invoice.client_name}</CardDescription>
+                            </div>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-1">
+                            {getPaymentStatusBadge(invoice.payment_status)}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="size-8">
+                                  <MoreHorizontal className="size-4" />
+                                  <span className="sr-only">More actions</span>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  className="text-red-600 focus:text-red-600"
+                                  onClick={() => {
+                                    setInvoiceToDelete(invoice)
+                                    setDeleteDialogOpen(true)
+                                  }}
+                                >
+                                  <Trash2 className="mr-2 size-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         </div>
-                        <div className="shrink-0">{getPaymentStatusBadge(invoice.payment_status)}</div>
-                      </div>
-
-                      <div className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
-                        <div className="min-w-0">
-                          <span className="text-muted-foreground">Date: </span>
-                          <span className="font-medium">{formatDate(invoice.invoice_date)}</span>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                          <div><p className="text-xs text-muted-foreground">Date</p><p className="text-sm font-medium">{formatDate(invoice.invoice_date)}</p></div>
+                          <div><p className="text-xs text-muted-foreground">Valid Till</p><p className="text-sm font-medium">{formatDate(invoice.due_date)}</p></div>
+                          <div className="col-span-2"><p className="text-xs text-muted-foreground">Amount</p><p className="text-sm font-medium">{formatCurrency(invoice.grand_total)}</p></div>
                         </div>
-                        <div className="min-w-0">
-                          <span className="text-muted-foreground">Valid Till: </span>
-                          <span className="font-medium">{formatDate(invoice.due_date)}</span>
+                        <div className="flex items-center justify-between border-t border-border pt-2">
+                          <span className="text-xs text-muted-foreground">Invoice</span>
+                          <Link href={`/invoices/${invoice.id}`}>
+                            <Button variant="ghost" size="sm"><Eye className="mr-2 size-4" />View</Button>
+                          </Link>
                         </div>
-                        <div className="col-span-2 min-w-0">
-                          <span className="text-muted-foreground">Amount: </span>
-                          <span className="font-medium">{formatCurrency(invoice.grand_total)}</span>
-                        </div>
-                      </div>
-
-                      <div className="mt-2.5 flex items-center justify-end gap-1 border-t pt-2">
-                        <Link href={`/invoices/${invoice.id}`}>
-                          <Button variant="ghost" size="sm">
-                            <Eye className="size-4" />
-                            <span className="sr-only">View</span>
-                          </Button>
-                        </Link>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="size-4" />
-                              <span className="sr-only">More actions</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              className="text-red-600 focus:text-red-600"
-                              onClick={() => {
-                                setInvoiceToDelete(invoice)
-                                setDeleteDialogOpen(true)
-                              }}
-                            >
-                              <Trash2 className="mr-2 size-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
+                      </CardContent>
+                    </Card>
                   ))}
                 </div>
               </>
