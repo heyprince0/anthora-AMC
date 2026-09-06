@@ -449,7 +449,7 @@ export default function ItemsTable({
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => onEditItem(item)}>
                             <Edit className="mr-2 size-4" />
-                            Edit
+                            View
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleHistoryClick(item)}>
                             <History className="mr-2 size-4" />
