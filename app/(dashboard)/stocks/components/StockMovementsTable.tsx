@@ -124,22 +124,28 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
     return suppliers.find((s) => s.id === id)?.name || "—"
   }
 
-  // Compute total amount for a movement
+  /**
+   * Computes the financial total for a movement.
+   * - "in" → positive (purchase_price * qty) [value added]
+   * - "out" with reason "Sold" → positive (selling_price * qty) [revenue]
+   * - "out" with any other reason → negative (purchase_price * qty) [loss]
+   */
   const getMovementTotal = (movement: StockMovement): { amount: number; sign: string; color: string } | null => {
     const item = getItem(movement.item_id)
     if (!item) return null
 
-    const quantity = movement.quantity
+    const qty = movement.quantity
     if (movement.movement_type === "in") {
-      const amount = quantity * (item.purchase_price || 0)
+      const amount = qty * (item.purchase_price || 0)
       return { amount, sign: "+", color: "text-green-600" }
     } else {
       // movement_type === "out"
       if (movement.reason === "Sold") {
-        const amount = quantity * (item.selling_price || 0)
+        const amount = qty * (item.selling_price || 0)
         return { amount, sign: "+", color: "text-green-600" }
       } else {
-        const amount = quantity * (item.purchase_price || 0)
+        // Used, Damaged, Wasted, Expired, etc.
+        const amount = qty * (item.purchase_price || 0)
         return { amount, sign: "-", color: "text-red-600" }
       }
     }
