@@ -241,9 +241,9 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
     : "No stock movements recorded"
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 overflow-x-hidden">
 
-      {/* ── DESKTOP: Card with title (no description) ── */}
+      {/* ── DESKTOP Table ── */}
       <Card className="hidden md:block">
         <CardHeader>
           <CardTitle>Stock Movements</CardTitle>
@@ -318,7 +318,7 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
         </CardContent>
       </Card>
 
-      {/* ── MOBILE: Title + Cards (no description) ── */}
+      {/* ── MOBILE Cards ── */}
       <div className="flex flex-col gap-4 md:hidden">
         <h2 className="text-lg font-semibold">Stock Movements</h2>
         {FiltersRow}
@@ -345,10 +345,11 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
                         }
                       </div>
                       <div className="min-w-0">
-                        <CardTitle className="text-sm font-semibold leading-tight truncate">
+                        {/* ── FIX: allow long names to wrap ── */}
+                        <CardTitle className="text-sm font-semibold leading-tight break-words">
                           {getItemName(movement.item_id)}
                         </CardTitle>
-                        <CardDescription className="text-xs truncate mt-0.5">
+                        <CardDescription className="text-xs break-words mt-0.5">
                           {formatDate(movement.created_at)}
                         </CardDescription>
                       </div>
