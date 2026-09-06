@@ -124,7 +124,6 @@ function hexToRgb(hex: string): [number, number, number] {
     : [22, 45, 60]
 }
 
-// Month options for filter
 const MONTHS = [
   { value: 'all', label: 'All Months' },
   { value: '0', label: 'Jan' },
@@ -206,9 +205,7 @@ export default function ContractsPage() {
           .select('*, plan:plan_id(*)')
           .eq('org_id', currentOrgId)
           .maybeSingle()
-
         if (error) throw error
-
         if (subData) {
           setSubscription(subData)
           setPlan(subData.plan)
@@ -236,7 +233,6 @@ export default function ContractsPage() {
         .from('contracts')
         .select('*', { count: 'exact', head: true })
         .eq('org_id', currentOrgId)
-
       if (error) throw error
       setContractCount(count || 0)
     } catch (error) {
@@ -541,7 +537,7 @@ export default function ContractsPage() {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col gap-6 min-w-0">
+      <div className="flex flex-col gap-6 min-w-0 overflow-x-hidden">
         {/* Page Header */}
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between flex-wrap">
           <div>
@@ -562,7 +558,7 @@ export default function ContractsPage() {
           </div>
         </div>
 
-        {/* ── Standalone Filter Bar (no card) ── */}
+        {/* ── Standalone Filter Bar ── */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center flex-wrap min-w-0">
           <div className="relative flex-1 min-w-[150px]">
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -574,9 +570,10 @@ export default function ContractsPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="flex gap-2 flex-wrap">
+
+          <div className="grid grid-cols-2 gap-2 w-full md:flex md:flex-wrap md:w-auto md:gap-2">
             <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-[140px] sm:w-[160px]">
+              <SelectTrigger className="w-full md:w-[140px] sm:w-[160px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -589,7 +586,7 @@ export default function ContractsPage() {
             </Select>
 
             <Select value={filterMonth} onValueChange={setFilterMonth}>
-              <SelectTrigger className="w-[140px] sm:w-[160px]">
+              <SelectTrigger className="w-full md:w-[140px] sm:w-[160px]">
                 <SelectValue placeholder="Month" />
               </SelectTrigger>
               <SelectContent>
@@ -601,68 +598,70 @@ export default function ContractsPage() {
               </SelectContent>
             </Select>
 
-            <Popover open={locationPopoverOpen} onOpenChange={setLocationPopoverOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={locationPopoverOpen}
-                  className="w-[140px] sm:w-[160px] justify-between font-normal"
-                >
-                  <span className="truncate">
-                    {filterLocation === "all" ? "Location" : filterLocation}
-                  </span>
-                  <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[200px] p-0" align="start">
-                <Command>
-                  <CommandInput placeholder="Search location..." />
-                  <CommandList>
-                    <CommandEmpty>No location found.</CommandEmpty>
-                    <CommandGroup>
-                      <CommandItem
-                        value="all"
-                        onSelect={() => {
-                          setFilterLocation("all")
-                          setLocationPopoverOpen(false)
-                        }}
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 size-4",
-                            filterLocation === "all" ? "opacity-100" : "opacity-0"
-                          )}
-                        />
-                        All Locations
-                      </CommandItem>
-                      {availableLocations.map((loc) => (
+            <div className="col-span-2 md:col-span-1">
+              <Popover open={locationPopoverOpen} onOpenChange={setLocationPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={locationPopoverOpen}
+                    className="w-full md:w-[140px] sm:w-[160px] justify-between font-normal"
+                  >
+                    <span className="truncate">
+                      {filterLocation === "all" ? "Location" : filterLocation}
+                    </span>
+                    <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[200px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search location..." />
+                    <CommandList>
+                      <CommandEmpty>No location found.</CommandEmpty>
+                      <CommandGroup>
                         <CommandItem
-                          key={loc}
-                          value={loc}
+                          value="all"
                           onSelect={() => {
-                            setFilterLocation(filterLocation === loc ? "all" : loc)
+                            setFilterLocation("all")
                             setLocationPopoverOpen(false)
                           }}
                         >
                           <Check
                             className={cn(
                               "mr-2 size-4",
-                              filterLocation === loc ? "opacity-100" : "opacity-0"
+                              filterLocation === "all" ? "opacity-100" : "opacity-0"
                             )}
                           />
-                          <span className="truncate">{loc}</span>
+                          All Locations
                         </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
+                        {availableLocations.map((loc) => (
+                          <CommandItem
+                            key={loc}
+                            value={loc}
+                            onSelect={() => {
+                              setFilterLocation(filterLocation === loc ? "all" : loc)
+                              setLocationPopoverOpen(false)
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 size-4",
+                                filterLocation === loc ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            <span className="truncate">{loc}</span>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
         </div>
 
-        {/* ── DESKTOP: All Contracts table ── */}
+        {/* ── DESKTOP Table ── */}
         <Card className="hidden md:block min-w-0 w-full">
           <CardHeader>
             <CardTitle>All Contracts</CardTitle>
@@ -713,11 +712,7 @@ export default function ContractsPage() {
                             <TableCell>
                               <div className="flex items-center gap-1">
                                 <Link href={`/contracts/${contract.id}`}>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    title="View Contract Details"
-                                  >
+                                  <Button variant="ghost" size="sm" title="View Contract Details">
                                     <Eye className="size-4" />
                                     <span className="sr-only">View</span>
                                   </Button>
@@ -756,7 +751,7 @@ export default function ContractsPage() {
           </CardContent>
         </Card>
 
-        {/* ── MOBILE: Individual contract cards ── */}
+        {/* ── MOBILE Cards ── */}
         <div className="flex flex-col gap-4 md:hidden">
           {loading ? (
             <div className="text-center py-8 text-muted-foreground">Loading contracts...</div>
@@ -867,7 +862,7 @@ export default function ContractsPage() {
           )}
         </div>
 
-        {/* Add/Edit Contract Modal */}
+        {/* Modals */}
         {user && currentOrgId && !isTechnician && (
           <AddContractModal
             open={modalOpen}
@@ -879,7 +874,6 @@ export default function ContractsPage() {
           />
         )}
 
-        {/* Delete Confirmation Dialog */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -901,7 +895,6 @@ export default function ContractsPage() {
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* Limit Reached Modal */}
         <LimitReachedModal
           isOpen={showLimitModal}
           onClose={() => setShowLimitModal(false)}
@@ -912,7 +905,6 @@ export default function ContractsPage() {
           customDescription={limitModalCustom.description}
         />
 
-        {/* Plan Selection Modal */}
         <PlanSelectionModal
           isOpen={showPlanModal}
           onClose={() => setShowPlanModal(false)}
