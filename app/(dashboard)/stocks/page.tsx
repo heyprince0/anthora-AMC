@@ -302,21 +302,19 @@ export default function StocksPage() {
           </div>
         )}
 
-        {/* ── TABS – Improved for mobile navigation ── */}
+        {/* ── TABS – Icon‑only on mobile, icon+label on desktop ── */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList
             className={`
-              w-full justify-start overflow-x-auto scrollbar-hide
-              bg-transparent border-b border-border p-0 h-auto
-              md:justify-center md:bg-muted md:border-0 md:p-1 md:h-10
+              w-full justify-around rounded-none border-b border-border bg-transparent p-0 h-auto
+              md:justify-center md:rounded-md md:border-0 md:bg-muted md:p-1 md:h-10
             `}
           >
             <TabsTrigger
               value="items"
               className={`
-                flex-1 min-w-[80px] shrink-0 items-center gap-1.5
-                border-b-2 border-transparent rounded-none px-2 py-2.5
-                text-xs font-medium text-muted-foreground transition-all
+                flex flex-1 items-center justify-center gap-1.5 rounded-none border-b-2 border-transparent
+                px-3 py-3 text-sm font-medium text-muted-foreground transition-all
                 data-[state=active]:border-primary data-[state=active]:text-primary
                 hover:text-foreground hover:border-muted-foreground/30
                 md:flex-none md:rounded-md md:border-0 md:px-4 md:py-1.5
@@ -324,18 +322,22 @@ export default function StocksPage() {
                 md:data-[state=active]:border-0
               `}
             >
-              <Package className="size-4 shrink-0" />
-              <span className="hidden sm:inline">Items</span>
-              <span className="sm:hidden">Items</span>
-              <span className="text-xs text-muted-foreground">({currentInventoryCount || 0})</span>
+              <Package className="size-5 shrink-0 md:size-4" />
+              <span className="hidden md:inline">Items</span>
+              <span className="text-xs text-muted-foreground hidden md:inline">
+                ({currentInventoryCount || 0})
+              </span>
+              {/* Show count badge on mobile as a small number next to icon */}
+              <span className="ml-1 text-xs font-semibold text-muted-foreground md:hidden">
+                {currentInventoryCount || 0}
+              </span>
             </TabsTrigger>
 
             <TabsTrigger
               value="movements"
               className={`
-                flex-1 min-w-[80px] shrink-0 items-center gap-1.5
-                border-b-2 border-transparent rounded-none px-2 py-2.5
-                text-xs font-medium text-muted-foreground transition-all
+                flex flex-1 items-center justify-center gap-1.5 rounded-none border-b-2 border-transparent
+                px-3 py-3 text-sm font-medium text-muted-foreground transition-all
                 data-[state=active]:border-primary data-[state=active]:text-primary
                 hover:text-foreground hover:border-muted-foreground/30
                 md:flex-none md:rounded-md md:border-0 md:px-4 md:py-1.5
@@ -343,16 +345,15 @@ export default function StocksPage() {
                 md:data-[state=active]:border-0
               `}
             >
-              <ArrowLeftRight className="size-4 shrink-0" />
-              <span>Movements</span>
+              <ArrowLeftRight className="size-5 shrink-0 md:size-4" />
+              <span className="hidden md:inline">Movements</span>
             </TabsTrigger>
 
             <TabsTrigger
               value="categories"
               className={`
-                flex-1 min-w-[80px] shrink-0 items-center gap-1.5
-                border-b-2 border-transparent rounded-none px-2 py-2.5
-                text-xs font-medium text-muted-foreground transition-all
+                flex flex-1 items-center justify-center gap-1.5 rounded-none border-b-2 border-transparent
+                px-3 py-3 text-sm font-medium text-muted-foreground transition-all
                 data-[state=active]:border-primary data-[state=active]:text-primary
                 hover:text-foreground hover:border-muted-foreground/30
                 md:flex-none md:rounded-md md:border-0 md:px-4 md:py-1.5
@@ -360,16 +361,15 @@ export default function StocksPage() {
                 md:data-[state=active]:border-0
               `}
             >
-              <FolderTree className="size-4 shrink-0" />
-              <span>Categories</span>
+              <FolderTree className="size-5 shrink-0 md:size-4" />
+              <span className="hidden md:inline">Categories</span>
             </TabsTrigger>
 
             <TabsTrigger
               value="suppliers"
               className={`
-                flex-1 min-w-[80px] shrink-0 items-center gap-1.5
-                border-b-2 border-transparent rounded-none px-2 py-2.5
-                text-xs font-medium text-muted-foreground transition-all
+                flex flex-1 items-center justify-center gap-1.5 rounded-none border-b-2 border-transparent
+                px-3 py-3 text-sm font-medium text-muted-foreground transition-all
                 data-[state=active]:border-primary data-[state=active]:text-primary
                 hover:text-foreground hover:border-muted-foreground/30
                 md:flex-none md:rounded-md md:border-0 md:px-4 md:py-1.5
@@ -377,8 +377,8 @@ export default function StocksPage() {
                 md:data-[state=active]:border-0
               `}
             >
-              <Truck className="size-4 shrink-0" />
-              <span>Suppliers</span>
+              <Truck className="size-5 shrink-0 md:size-4" />
+              <span className="hidden md:inline">Suppliers</span>
             </TabsTrigger>
           </TabsList>
 
