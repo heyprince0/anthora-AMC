@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation" // <-- added useSearchParams
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -41,6 +42,8 @@ interface InventoryMetrics {
 
 export default function StocksPage() {
   const { user } = useAuth()
+  const router = useRouter()
+  const searchParams = useSearchParams() // <-- get query params
   const [currentOrgId, setCurrentOrgId] = useState<string | null>(null)
   const [metrics, setMetrics] = useState<InventoryMetrics | null>(null)
   const [loading, setLoading] = useState(true)
@@ -60,6 +63,14 @@ export default function StocksPage() {
   const [showLimitModal, setShowLimitModal] = useState(false)
   const [limitModalType, setLimitModalType] = useState<'expired' | 'resource-limit'>('expired')
   const [limitModalCustom, setLimitModalCustom] = useState<{ title?: string; description?: string }>({})
+
+  // ── Read tab query param ──
+  const tabParam = searchParams.get('tab')
+  useEffect(() => {
+    if (tabParam && ['items', 'movements', 'categories', 'suppliers'].includes(tabParam)) {
+      setActiveTab(tabParam)
+    }
+  }, [tabParam])
 
   useEffect(() => {
     if (user?.id) {
