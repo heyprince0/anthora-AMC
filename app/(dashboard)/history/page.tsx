@@ -23,9 +23,10 @@ import {
 } from "@/components/ui/select"
 import { supabase, type ServiceHistory, type Contract, type Technician, type Customer, type CompanyProfile } from "@/lib/supabase"
 import { useAuth } from "@/lib/auth-context"
-import { Search, Download, Calendar, CheckCircle2, XCircle, Clock } from "lucide-react"
+import { Search, Download, Calendar, CheckCircle2, XCircle, Clock, FileText, Eye } from "lucide-react"
 import { ExportModal } from "@/components/export-modal"
 import { toast } from "sonner"
+import Link from "next/link"
 
 // Month options for the date filter
 const MONTHS = [
@@ -197,6 +198,12 @@ export default function ServiceHistoryPage() {
     handleFilter()
   }, [searchTerm, filterMonth, serviceRecords])
 
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '—'
+    const d = new Date(dateStr)
+    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+  }
+
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-6">
@@ -217,7 +224,7 @@ export default function ServiceHistoryPage() {
           </div>
         </div>
 
-        {/* Filters */}
+        {/* Filter Bar */}
         <Card>
           <CardContent className="p-4">
             <div className="flex flex-col gap-4 md:flex-row md:items-center flex-wrap">
@@ -249,8 +256,8 @@ export default function ServiceHistoryPage() {
           </CardContent>
         </Card>
 
-        {/* Service History Table */}
-        <Card>
+        {/* Desktop: Service History Table */}
+        <Card className="hidden md:block">
           <CardHeader>
             <CardTitle>Service Records</CardTitle>
             <CardDescription>
@@ -281,11 +288,7 @@ export default function ServiceHistoryPage() {
                       <TableCell className="font-medium">{record.customerName}</TableCell>
                       <TableCell>{record.contractName}</TableCell>
                       <TableCell>{record.technicianName}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span>{record.service_date}</span>
-                        </div>
-                      </TableCell>
+                      <TableCell>{formatDate(record.service_date)}</TableCell>
                       <TableCell>
                         {record.contractPrice != null
                           ? `₹${record.contractPrice.toLocaleString('en-IN')}`
@@ -305,7 +308,87 @@ export default function ServiceHistoryPage() {
           </CardContent>
         </Card>
 
-        {/* Export Modal (keeping for backward compatibility – you can remove if not needed) */}
+        {/* Mobile: Service History Cards */}
+        <div className="flex flex-col gap-4 md:hidden">
+          {loading ? (
+            <div className="text-center py-8 text-muted-foreground">Loading service history...</div>
+          ) : filteredRecords.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">No service records found</div>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Showing{" "}
+                <span className="font-medium text-foreground">{filteredRecords.length}</span>{" "}
+                records{" "}
+                {searchTerm || filterMonth !== 'all' ? 'matching filters' : 'in total'}
+              </p>
+
+              {filteredRecords.map((record) => (
+                <Card key={record.id} className="relative">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                          <FileText className="size-5 text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                          <CardTitle className="text-sm font-semibold leading-tight truncate">
+                            {record.contractName}
+                          </CardTitle>
+                          <CardDescription className="text-xs truncate mt-0.5">
+                            {record.customerName}
+                          </CardDescription>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {getStatusBadge(record.status)}
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-0.5">Technician</p>
+                        <p className="text-sm font-medium">{record.technicianName}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-0.5">Date</p>
+                        <p className="text-sm font-medium">{formatDate(record.service_date)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-0.5">Price</p>
+                        <p className="text-sm font-medium">
+                          {record.contractPrice != null
+                            ? `₹${record.contractPrice.toLocaleString('en-IN')}`
+                            : '—'}
+                        </p>
+                      </div>
+                      {record.notes && (
+                        <div className="col-span-2">
+                          <p className="text-xs text-muted-foreground mb-0.5">Notes</p>
+                          <p className="text-sm font-medium line-clamp-2">{record.notes}</p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between pt-2 border-t border-border">
+                      <div className="text-xs text-muted-foreground truncate">
+                        &nbsp;
+                      </div>
+                      <Link href={`/service-history/${record.id}`}>
+                        <Button variant="ghost" size="sm" className="gap-2 shrink-0">
+                          <Eye className="size-4" />
+                          View
+                        </Button>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </>
+          )}
+        </div>
+
+        {/* Export Modal */}
         <ExportModal
           open={exportModalOpen}
           onOpenChange={setExportModalOpen}
