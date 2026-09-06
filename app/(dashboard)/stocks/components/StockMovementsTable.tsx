@@ -125,26 +125,36 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
   }
 
   /**
-   * Computes the financial total for a movement.
-   * - "in" → positive (purchase_price * qty) [value added]
-   * - "out" with reason "Sold" → positive (selling_price * qty) [revenue]
-   * - "out" with any other reason → negative (purchase_price * qty) [loss]
+   * CORRECTED LOGIC:
+   * - Purchase (in) → negative (cost)
+   * - Other in (Return, Adjustment) → positive (value added)
+   * - Sold (out) → positive (revenue)
+   * - Other out (Used, Damaged, etc.) → negative (loss)
    */
   const getMovementTotal = (movement: StockMovement): { amount: number; sign: string; color: string } | null => {
     const item = getItem(movement.item_id)
     if (!item) return null
 
     const qty = movement.quantity
+
     if (movement.movement_type === "in") {
-      const amount = qty * (item.purchase_price || 0)
-      return { amount, sign: "+", color: "text-green-600" }
+      if (movement.reason === "Purchase") {
+        // Purchase → expense, negative
+        const amount = qty * (item.purchase_price || 0)
+        return { amount, sign: "-", color: "text-red-600" }
+      } else {
+        // Other in (Return, Adjustment) → positive
+        const amount = qty * (item.purchase_price || 0)
+        return { amount, sign: "+", color: "text-green-600" }
+      }
     } else {
       // movement_type === "out"
       if (movement.reason === "Sold") {
+        // Sold → revenue, positive (selling price)
         const amount = qty * (item.selling_price || 0)
         return { amount, sign: "+", color: "text-green-600" }
       } else {
-        // Used, Damaged, Wasted, Expired, etc.
+        // Used, Damaged, Wasted, Expired, etc. → loss, negative
         const amount = qty * (item.purchase_price || 0)
         return { amount, sign: "-", color: "text-red-600" }
       }
