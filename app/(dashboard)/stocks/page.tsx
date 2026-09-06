@@ -271,42 +271,49 @@ export default function StocksPage() {
           </div>
         </div>
 
-        {/* ── MOBILE: Full 5‑metric stats strip (same as desktop) ── */}
-        <div className="grid grid-cols-5 gap-2 md:hidden">
-          <div className="rounded-lg border bg-card p-2 text-center">
-            <Package className="mx-auto size-5 text-muted-foreground" />
-            <p className="mt-1 text-lg font-bold leading-none">
-              {loading ? "—" : metrics?.totalItems ?? 0}
-            </p>
-            <p className="mt-0.5 text-[10px] text-muted-foreground">Total</p>
+        {/* ── MOBILE: Summary stats in two rows (3+2) ── */}
+        <div className="flex flex-col gap-2 md:hidden">
+          {/* Row 1: Total, Low Stock, Out of Stock */}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="rounded-lg border bg-card p-2 text-center">
+              <Package className="mx-auto size-5 text-muted-foreground" />
+              <p className="mt-1 text-lg font-bold leading-none">
+                {loading ? "—" : metrics?.totalItems ?? 0}
+              </p>
+              <p className="mt-0.5 text-[10px] text-muted-foreground">Total</p>
+            </div>
+            <div className="rounded-lg border bg-card p-2 text-center">
+              <AlertTriangle className="mx-auto size-5 text-amber-500" />
+              <p className="mt-1 text-lg font-bold leading-none text-amber-600">
+                {loading ? "—" : metrics?.lowStockCount ?? 0}
+              </p>
+              <p className="mt-0.5 text-[10px] text-muted-foreground">Low Stock</p>
+            </div>
+            <div className="rounded-lg border bg-card p-2 text-center">
+              <Minus className="mx-auto size-5 text-red-500" />
+              <p className="mt-1 text-lg font-bold leading-none text-red-600">
+                {loading ? "—" : metrics?.outOfStockCount ?? 0}
+              </p>
+              <p className="mt-0.5 text-[10px] text-muted-foreground">Out of Stock</p>
+            </div>
           </div>
-          <div className="rounded-lg border bg-card p-2 text-center">
-            <AlertTriangle className="mx-auto size-5 text-amber-500" />
-            <p className="mt-1 text-lg font-bold leading-none text-amber-600">
-              {loading ? "—" : metrics?.lowStockCount ?? 0}
-            </p>
-            <p className="mt-0.5 text-[10px] text-muted-foreground">Low Stock</p>
-          </div>
-          <div className="rounded-lg border bg-card p-2 text-center">
-            <Minus className="mx-auto size-5 text-red-500" />
-            <p className="mt-1 text-lg font-bold leading-none text-red-600">
-              {loading ? "—" : metrics?.outOfStockCount ?? 0}
-            </p>
-            <p className="mt-0.5 text-[10px] text-muted-foreground">Out of Stock</p>
-          </div>
-          <div className="rounded-lg border bg-card p-2 text-center">
-            <Coins className="mx-auto size-5 text-green-500" />
-            <p className="mt-1 text-lg font-bold leading-none">
-              {loading ? "—" : formatINR(metrics?.totalInventoryValue ?? 0)}
-            </p>
-            <p className="mt-0.5 text-[10px] text-muted-foreground">Value</p>
-          </div>
-          <div className="rounded-lg border bg-card p-2 text-center">
-            <Calendar className="mx-auto size-5 text-blue-500" />
-            <p className="mt-1 text-lg font-bold leading-none">
-              {loading ? "—" : metrics?.partsUsedThisMonth ?? 0}
-            </p>
-            <p className="mt-0.5 text-[10px] text-muted-foreground">Parts Used</p>
+
+          {/* Row 2: Inventory Value, Parts Used (2 columns) */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-lg border bg-card p-2 text-center">
+              <Coins className="mx-auto size-5 text-green-500" />
+              <p className="mt-1 text-lg font-bold leading-none">
+                {loading ? "—" : formatINR(metrics?.totalInventoryValue ?? 0)}
+              </p>
+              <p className="mt-0.5 text-[10px] text-muted-foreground">Value</p>
+            </div>
+            <div className="rounded-lg border bg-card p-2 text-center">
+              <Calendar className="mx-auto size-5 text-blue-500" />
+              <p className="mt-1 text-lg font-bold leading-none">
+                {loading ? "—" : metrics?.partsUsedThisMonth ?? 0}
+              </p>
+              <p className="mt-0.5 text-[10px] text-muted-foreground">Parts Used</p>
+            </div>
           </div>
         </div>
 
