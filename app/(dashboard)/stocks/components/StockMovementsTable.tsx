@@ -125,6 +125,14 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
   }
 
   /**
+   * Display helper: show "Sell" instead of "Sold" in the UI only.
+   */
+  const getDisplayReason = (reason: string) => {
+    if (reason === "Sold") return "Sell"
+    return reason
+  }
+
+  /**
    * CORRECTED LOGIC:
    * - Purchase (in) → negative (cost)
    * - Other in (Return, Adjustment) → positive (value added)
@@ -312,7 +320,7 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
                             "—"
                           )}
                         </TableCell>
-                        <TableCell className="text-sm">{movement.reason}</TableCell>
+                        <TableCell className="text-sm">{getDisplayReason(movement.reason)}</TableCell>
                         <TableCell className="text-sm">{getTechnicianName(movement.technician_id)}</TableCell>
                         <TableCell className="text-sm">{getSupplierName(movement.supplier_id)}</TableCell>
                         <TableCell className="text-sm">{movement.customer_name || "—"}</TableCell>
@@ -348,6 +356,7 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
             const total = getMovementTotal(movement)
             const technicianName = getTechnicianName(movement.technician_id)
             const supplierName = getSupplierName(movement.supplier_id)
+            const customerName = movement.customer_name
 
             return (
               <Card key={movement.id}>
@@ -371,7 +380,7 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
                       </div>
                     </div>
 
-                    {/* Right: In/Out badge + quantity + total amount (larger on mobile) */}
+                    {/* Right: In/Out badge + quantity + total amount */}
                     <div className="flex flex-col items-end gap-0.5 shrink-0">
                       <div className="flex items-center gap-2">
                         <Badge className={movement.movement_type === "in" ? "bg-green-500/10 text-green-600 border-green-500/20" : "bg-red-500/10 text-red-600 border-red-500/20"}>
@@ -392,10 +401,10 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
 
                 <CardContent>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
-                    {/* Reason (always shown) */}
+                    {/* Reason (always shown) – display "Sell" instead of "Sold" */}
                     <div>
                       <p className="text-xs text-muted-foreground mb-0.5">Reason</p>
-                      <p className="text-sm font-medium">{movement.reason}</p>
+                      <p className="text-sm font-medium">{getDisplayReason(movement.reason)}</p>
                     </div>
 
                     {/* Technician – only if name is not "—" */}
@@ -414,11 +423,13 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
                       </div>
                     )}
 
-                    {/* Customer (always shown, falls back to "—") */}
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-0.5">Customer</p>
-                      <p className="text-sm font-medium">{movement.customer_name || "—"}</p>
-                    </div>
+                    {/* Customer – only if present and not "—" */}
+                    {customerName && customerName.trim() !== "" && customerName !== "—" && (
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-0.5">Customer</p>
+                        <p className="text-sm font-medium">{customerName}</p>
+                      </div>
+                    )}
 
                     {/* Notes – only if present */}
                     {movement.notes && (
