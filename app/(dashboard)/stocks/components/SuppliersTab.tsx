@@ -137,6 +137,9 @@ export default function SuppliersTab({ orgId }: SuppliersTabProps) {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* ── Title (mobile only) ── */}
+      <h2 className="text-lg font-semibold md:hidden">Suppliers</h2>
+
       {/* ── Filter Bar (plain, no card) ── */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center">
         <div className="relative flex-1">
@@ -229,9 +232,8 @@ export default function SuppliersTab({ orgId }: SuppliersTabProps) {
         </CardContent>
       </Card>
 
-      {/* ── MOBILE: Title + Cards (no count line) ── */}
+      {/* ── MOBILE: Cards (title now above filter) ── */}
       <div className="flex flex-col gap-4 md:hidden">
-        <h2 className="text-lg font-semibold">Suppliers</h2>
         {loading ? (
           <div className="text-center py-8 text-muted-foreground">Loading suppliers...</div>
         ) : filteredSuppliers.length === 0 ? (

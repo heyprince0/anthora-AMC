@@ -155,6 +155,9 @@ export default function CategoriesTab({ orgId }: CategoriesTabProps) {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* ── Title (mobile only) ── */}
+      <h2 className="text-lg font-semibold md:hidden">Categories</h2>
+
       {/* ── Filter Bar (plain, no card) ── */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center">
         <div className="relative flex-1">
@@ -245,9 +248,8 @@ export default function CategoriesTab({ orgId }: CategoriesTabProps) {
         </CardContent>
       </Card>
 
-      {/* ── MOBILE: Title + Cards (no count line) ── */}
+      {/* ── MOBILE: Cards (title now above filter) ── */}
       <div className="flex flex-col gap-4 md:hidden">
-        <h2 className="text-lg font-semibold">Categories</h2>
         {loading ? (
           <div className="text-center py-8 text-muted-foreground">Loading categories...</div>
         ) : filteredCategories.length === 0 ? (
