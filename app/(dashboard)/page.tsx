@@ -23,6 +23,7 @@ import {
   DollarSign,
   TrendingUp,
   ScanBarcode,
+  ArrowLeftRight,
 } from "lucide-react"
 import { AddContractModal } from "@/components/add-contract-modal"
 import { subscribeToNotifications } from "@/lib/push-notifications"
@@ -93,11 +94,9 @@ export default function DashboardPage() {
   const [dataReady, setDataReady] = useState(false)
   const [autoShown, setAutoShown] = useState(false)
 
-  // --- Inventory metrics state ---
   const [inventoryMetrics, setInventoryMetrics] = useState<InventoryMetrics | null>(null)
   const [inventoryLoading, setInventoryLoading] = useState(true)
 
-  // --- Barcode scan state (for Scan Barcode button, mirrors /stocks page) ---
   const [scanDialogOpen, setScanDialogOpen] = useState(false)
   const [categories, setCategories] = useState<any[]>([])
 
@@ -108,7 +107,6 @@ export default function DashboardPage() {
         .from("inventory_categories")
         .select("*")
         .eq("org_id", currentOrgId)
-
       if (error) throw error
       setCategories(data || [])
     } catch (error) {
@@ -116,11 +114,9 @@ export default function DashboardPage() {
     }
   }
 
-  // --- Loading state for redirect check ---
   const [isRedirecting, setIsRedirecting] = useState(true)
   const [orgCheckDone, setOrgCheckDone] = useState(false)
 
-  // Fetch org_id – but do NOT redirect to /profile-setup
   useEffect(() => {
     if (user?.id) {
       supabase
@@ -146,7 +142,6 @@ export default function DashboardPage() {
     }
   }, [user?.id])
 
-  // Fetch subscription and plan
   useEffect(() => {
     const fetchSubscription = async () => {
       if (!currentOrgId) return
@@ -156,9 +151,7 @@ export default function DashboardPage() {
           .select('*, plan:plan_id(*)')
           .eq('org_id', currentOrgId)
           .maybeSingle()
-
         if (error) throw error
-
         if (subData) {
           setSubscription(subData)
           setPlan(subData.plan)
@@ -184,7 +177,6 @@ export default function DashboardPage() {
         .from('contracts')
         .select('*', { count: 'exact', head: true })
         .eq('org_id', currentOrgId)
-
       if (error) throw error
       setContractCount(count || 0)
     } catch (error) {
@@ -192,7 +184,6 @@ export default function DashboardPage() {
     }
   }
 
-  // Load inventory metrics
   const loadInventoryMetrics = async () => {
     if (!currentOrgId) return
     setInventoryLoading(true)
@@ -202,11 +193,9 @@ export default function DashboardPage() {
         .select("id, current_stock, min_stock_level, purchase_price")
         .eq("org_id", currentOrgId)
         .eq("is_active", true)
-
       if (itemsError) throw itemsError
 
       const items = itemsData || []
-
       const totalItems = items.length
       const lowStockCount = items.filter(
         (item) => item.current_stock <= item.min_stock_level && item.current_stock > 0
@@ -216,14 +205,9 @@ export default function DashboardPage() {
         return sum + (item.current_stock * (item.purchase_price || 0))
       }, 0)
 
-      // Parts used this month (from service_parts_used + stock movements with reason 'Used')
       const now = new Date()
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-        .toISOString()
-        .split("T")[0]
-      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-        .toISOString()
-        .split("T")[0]
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0]
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0]
 
       const { data: partsData, error: partsError } = await supabase
         .from("service_parts_used")
@@ -231,7 +215,6 @@ export default function DashboardPage() {
         .eq("org_id", currentOrgId)
         .gte("created_at", monthStart)
         .lte("created_at", monthEnd)
-
       if (partsError) throw partsError
 
       const { data: usedMovementsData, error: usedMovementsError } = await supabase
@@ -242,20 +225,13 @@ export default function DashboardPage() {
         .eq("reason", "Used")
         .gte("created_at", monthStart)
         .lte("created_at", monthEnd)
-
       if (usedMovementsError) throw usedMovementsError
 
       const partsUsedThisMonth =
         (partsData || []).reduce((sum, part) => sum + (part.quantity || 0), 0) +
         (usedMovementsData || []).reduce((sum, movement) => sum + (movement.quantity || 0), 0)
 
-      setInventoryMetrics({
-        totalItems,
-        lowStockCount,
-        outOfStockCount,
-        totalInventoryValue,
-        partsUsedThisMonth,
-      })
+      setInventoryMetrics({ totalItems, lowStockCount, outOfStockCount, totalInventoryValue, partsUsedThisMonth })
     } catch (error) {
       console.error("Error loading inventory metrics:", error)
       toast.error("Failed to load inventory metrics")
@@ -272,21 +248,15 @@ export default function DashboardPage() {
       }
 
       const { data: contractsData, error: contractsError } = await supabase
-        .from('contracts')
-        .select('*')
-        .eq('org_id', currentOrgId)
+        .from('contracts').select('*').eq('org_id', currentOrgId)
       if (contractsError) throw contractsError
 
       const { data: customersData, error: customersError } = await supabase
-        .from('customers')
-        .select('*')
-        .eq('org_id', currentOrgId)
+        .from('customers').select('*').eq('org_id', currentOrgId)
       if (customersError) throw customersError
 
       const { data: techniciansData, error: techniciansError } = await supabase
-        .from('technicians')
-        .select('*')
-        .eq('org_id', currentOrgId)
+        .from('technicians').select('*').eq('org_id', currentOrgId)
       if (techniciansError) throw techniciansError
 
       const activeContracts = (contractsData as Contract[]).filter(c => c.status === 'active').length
@@ -310,37 +280,13 @@ export default function DashboardPage() {
 
         if (days < 0) {
           expired++
-          services.push({
-            id: contract.id,
-            customer: customer?.name || 'Unknown',
-            service: contract.contract_name,
-            date: 'Expired',
-            time: '',
-            technician: null,
-            status: 'expired'
-          })
+          services.push({ id: contract.id, customer: customer?.name || 'Unknown', service: contract.contract_name, date: 'Expired', time: '', technician: null, status: 'expired' })
         } else if (days === 0) {
           todayServicing++
-          services.push({
-            id: contract.id,
-            customer: customer?.name || 'Unknown',
-            service: contract.contract_name,
-            date: 'Today',
-            time: '',
-            technician: null,
-            status: 'today-servicing'
-          })
+          services.push({ id: contract.id, customer: customer?.name || 'Unknown', service: contract.contract_name, date: 'Today', time: '', technician: null, status: 'today-servicing' })
         } else if (days <= 3) {
           expiringSoon++
-          services.push({
-            id: contract.id,
-            customer: customer?.name || 'Unknown',
-            service: contract.contract_name,
-            date: new Date(contract.next_service_date).toLocaleDateString(),
-            time: '',
-            technician: null,
-            status: 'expiring-soon'
-          })
+          services.push({ id: contract.id, customer: customer?.name || 'Unknown', service: contract.contract_name, date: new Date(contract.next_service_date).toLocaleDateString(), time: '', technician: null, status: 'expiring-soon' })
         }
       }
 
@@ -356,8 +302,8 @@ export default function DashboardPage() {
 
       setUpcomingServices(services.slice(0, 4))
       await fetchContractCount()
-      await loadInventoryMetrics() // load inventory data
-      await loadCategories() // load categories for Add Item sheet (used by Scan Barcode flow)
+      await loadInventoryMetrics()
+      await loadCategories()
       setDataReady(true)
     } catch (error) {
       console.error('Error loading dashboard data:', error)
@@ -393,10 +339,7 @@ export default function DashboardPage() {
 
     if (isExpired) {
       setLimitModalType('expired')
-      setLimitModalCustom({
-        title: `Your ${plan?.name || 'current'} plan has expired`,
-        description: `Renew your ${plan?.name || 'current'} plan to keep using all features.`,
-      })
+      setLimitModalCustom({ title: `Your ${plan?.name || 'current'} plan has expired`, description: `Renew your ${plan?.name || 'current'} plan to keep using all features.` })
       setShowLimitModal(true)
       if (showOnLoad) setAutoShown(true)
       return true
@@ -421,7 +364,6 @@ export default function DashboardPage() {
     }
   }, [dataReady, autoShown, subscription, plan, contractCount])
 
-  // Real-time subscriptions
   useEffect(() => {
     if (!user?.id || !currentOrgId) return
 
@@ -448,10 +390,7 @@ export default function DashboardPage() {
   }, [user?.id, currentOrgId])
 
   const handleEnableNotifications = async () => {
-    if (!user?.id) {
-      toast.error('User not found')
-      return
-    }
+    if (!user?.id) { toast.error('User not found'); return }
     setNotificationLoading(true)
     const result = await subscribeToNotifications(user.id)
     if (result.success) {
@@ -478,14 +417,10 @@ export default function DashboardPage() {
     setShowPlanModal(false)
   }
 
-  const handleModalSuccess = () => {
-    loadData()
-  }
+  const handleModalSuccess = () => { loadData() }
 
-  // --- Technician redirect logic with loading ---
   useEffect(() => {
     if (authLoading || !user || !role) return
-
     if (role === 'technician') {
       if (technicianId) {
         router.push(`/technicians/${technicianId}`)
@@ -497,14 +432,12 @@ export default function DashboardPage() {
     }
   }, [authLoading, user, role, technicianId, router])
 
-  // Auth redirect
   useEffect(() => {
     if (!authLoading && !user) {
       window.location.href = '/landing.html'
     }
   }, [user, authLoading])
 
-  // Show skeleton loading while checking role, redirecting, or waiting on org check
   if (authLoading || isRedirecting || !orgCheckDone) {
     return (
       <DashboardLayout>
@@ -521,7 +454,6 @@ export default function DashboardPage() {
               <div className="h-9 w-32 rounded-md bg-muted" />
             </div>
           </div>
-
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="rounded-lg border border-border p-4">
@@ -531,7 +463,6 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
-
           <div className="grid gap-6 lg:grid-cols-2">
             <div className="rounded-lg border border-border p-4">
               <div className="h-5 w-40 rounded-md bg-muted" />
@@ -559,18 +490,13 @@ export default function DashboardPage() {
 
   if (!user) return null
 
-  // If no org, show a simple message
   if (!currentOrgId) {
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center py-12">
           <div className="max-w-md text-center">
-            <p className="text-muted-foreground">
-              You are not part of any organization yet.
-            </p>
-            <p className="text-sm text-muted-foreground mt-2">
-              Please complete your profile setup or contact your administrator.
-            </p>
+            <p className="text-muted-foreground">You are not part of any organization yet.</p>
+            <p className="text-sm text-muted-foreground mt-2">Please complete your profile setup or contact your administrator.</p>
           </div>
         </div>
       </DashboardLayout>
@@ -580,7 +506,28 @@ export default function DashboardPage() {
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+
+        {/* ── MOBILE header: compact with icon-only buttons ── */}
+        <div className="flex items-center justify-between md:hidden">
+          <div>
+            <h1 className="text-xl font-bold text-foreground">Dashboard</h1>
+            <p className="text-xs text-muted-foreground">Service overview</p>
+          </div>
+          <div className="flex gap-1.5">
+            <Button size="icon" variant="outline" onClick={() => setScanDialogOpen(true)} title="Scan Barcode">
+              <ScanBarcode className="size-4" />
+            </Button>
+            <Button size="icon" variant="outline" onClick={() => router.push('/stocks?tab=movements')} title="Stock Movements">
+              <ArrowLeftRight className="size-4" />
+            </Button>
+            <Button size="icon" onClick={handleAddClick} title="Add Contract">
+              <Plus className="size-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* ── DESKTOP header: full layout (unchanged) ── */}
+        <div className="hidden md:flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
             <p className="text-muted-foreground">Welcome back! Here{"'"}s your service overview.</p>
@@ -590,6 +537,10 @@ export default function DashboardPage() {
               <ScanBarcode className="mr-2 size-4" />
               Scan Barcode
             </Button>
+            <Button size="sm" variant="outline" onClick={() => router.push('/stocks?tab=movements')}>
+              <ArrowLeftRight className="mr-2 size-4" />
+              Stock Movements
+            </Button>
             <Button size="sm" onClick={handleAddClick}>
               <Plus className="mr-2 size-4" />
               Add Contract
@@ -597,7 +548,42 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+        {/* ── MOBILE: One compact summary Card (all 6 stats) ── */}
+        <div className="md:hidden">
+          <Card>
+            <CardContent className="p-4">
+              <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-0.5">Active Contracts</p>
+                  <p className="text-2xl font-bold">{loading ? "—" : stats.contracts}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-0.5">This Month</p>
+                  <p className="text-2xl font-bold">{loading ? "—" : stats.monthServicing}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-0.5">Expiring Soon</p>
+                  <p className="text-2xl font-bold text-amber-600">{loading ? "—" : stats.expiringSoon}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-0.5">Expired</p>
+                  <p className="text-2xl font-bold text-red-600">{loading ? "—" : stats.expired}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-0.5">Customers</p>
+                  <p className="text-2xl font-bold">{loading ? "—" : stats.customers}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-0.5">Technicians</p>
+                  <p className="text-2xl font-bold">{loading ? "—" : stats.technicians}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* ── DESKTOP: 6 StatCards grid (unchanged) ── */}
+        <div className="hidden md:grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
           <StatCard title="Active Contracts" value={stats.contracts} icon={FileText} description="Total" />
           <StatCard title="This Month Servicing" value={stats.monthServicing} icon={CalendarClock} description="This month" iconClassName="bg-alert-due-today/10" />
           <StatCard title="Expiring Soon" value={stats.expiringSoon} icon={CalendarCheck} description="In next 3 days" />
@@ -606,6 +592,7 @@ export default function DashboardPage() {
           <StatCard title="Technicians" value={stats.technicians} icon={Wrench} description="Available" />
         </div>
 
+        {/* ── Two-column section: Upcoming Services + Inventory Overview (unchanged) ── */}
         <div className="grid gap-6 lg:grid-cols-2">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -642,7 +629,6 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Inventory Overview Card - replaces Quick Access */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <div>
