@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation" // 👈 added
+import { useRouter } from "next/navigation"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -67,7 +67,7 @@ function getPaymentStatusBadge(status: string) {
 
 export default function InvoicesPage() {
   const { user } = useAuth()
-  const router = useRouter() // 👈 added
+  const router = useRouter()
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(true)
@@ -193,22 +193,16 @@ export default function InvoicesPage() {
     return false
   }
 
-  // ✅ Navigate to the dedicated new invoice page
   const handleNewInvoiceClick = async () => {
     if (!user?.id || !currentOrgId) return
 
-    // ✅ Don't let the click through until we actually know the plan status.
-    // Without this, a fast click right after page load could sneak past the
-    // expired/limit check because `status` hasn't been fetched yet.
     if (limitsLoading) {
       toast.error("Checking your plan status, please try again in a moment...")
       return
     }
 
-    // ✅ Check limits before anything else
     if (checkAndShowLimitModal()) return
 
-    // Then check company profile
     setCheckingProfile(true)
     try {
       const { data, error } = await supabase
@@ -232,7 +226,6 @@ export default function InvoicesPage() {
       }
     } catch (error) {
       console.error("Error checking company profile:", error)
-      // Fail open — don't block invoice creation if the check itself fails
       router.push("/invoices/new")
     } finally {
       setCheckingProfile(false)
@@ -274,34 +267,30 @@ export default function InvoicesPage() {
           </Button>
         </div>
 
-        {/* Filters */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Search by client name or invoice number..."
-                  className="pl-10"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-[160px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="unpaid">Unpaid</SelectItem>
-                  <SelectItem value="partial">Partial</SelectItem>
-                  <SelectItem value="paid">Paid</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
+        {/* ── Standalone Filters (no card) ── */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-center">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search by client name or invoice number..."
+              className="pl-10"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="unpaid">Unpaid</SelectItem>
+              <SelectItem value="partial">Partial</SelectItem>
+              <SelectItem value="paid">Paid</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
         {/* Invoices Table */}
         <Card>

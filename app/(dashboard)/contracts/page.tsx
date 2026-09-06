@@ -148,8 +148,8 @@ export default function ContractsPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterStatus, setFilterStatus] = useState("all")
-  const [filterMonth, setFilterMonth] = useState("all") // new month filter
-  const [filterLocation, setFilterLocation] = useState("all") // new location filter
+  const [filterMonth, setFilterMonth] = useState("all")
+  const [filterLocation, setFilterLocation] = useState("all")
   const [locationPopoverOpen, setLocationPopoverOpen] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingContract, setEditingContract] = useState<Contract | null>(null)
@@ -158,7 +158,7 @@ export default function ContractsPage() {
   const [deleting, setDeleting] = useState(false)
 
   const [currentOrgId, setCurrentOrgId] = useState<string | null>(null)
-  const [userRole, setUserRole] = useState<string | null>(null) // NEW: current user's role
+  const [userRole, setUserRole] = useState<string | null>(null)
 
   const [subscription, setSubscription] = useState<any>(null)
   const [plan, setPlan] = useState<any>(null)
@@ -186,7 +186,7 @@ export default function ContractsPage() {
             setLoading(false)
           } else if (data?.org_id) {
             setCurrentOrgId(data.org_id)
-            setUserRole(data.role) // store role
+            setUserRole(data.role)
           } else {
             setLoading(false)
           }
@@ -257,9 +257,7 @@ export default function ContractsPage() {
   }, [currentOrgId])
 
   const checkAndShowLimitModal = (showOnLoad = false) => {
-    // Technicians should not see the limit modal (they can't add anyway)
     if (userRole === 'technician') return false
-
     if (showOnLoad && autoShown) return
 
     let isExpired = false
@@ -308,7 +306,6 @@ export default function ContractsPage() {
   const handleFilter = () => {
     let filtered = contracts
 
-    // Search filter
     if (searchTerm) {
       filtered = filtered.filter(c =>
         c.contract_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -316,7 +313,6 @@ export default function ContractsPage() {
       )
     }
 
-    // Status filter
     if (filterStatus !== 'all') {
       filtered = filtered.filter(c => {
         const days = getDaysUntilService(c.next_service_date)
@@ -325,7 +321,6 @@ export default function ContractsPage() {
       })
     }
 
-    // Month filter (by next_service_date)
     if (filterMonth !== 'all') {
       const monthNum = parseInt(filterMonth)
       filtered = filtered.filter(c => {
@@ -335,7 +330,6 @@ export default function ContractsPage() {
       })
     }
 
-    // Location filter
     if (filterLocation !== 'all') {
       filtered = filtered.filter(c => c.location === filterLocation)
     }
@@ -347,8 +341,6 @@ export default function ContractsPage() {
     handleFilter()
   }, [searchTerm, filterStatus, filterMonth, filterLocation, contracts])
 
-  // Distinct, non-empty locations pulled from existing contracts — the Location
-  // filter dropdown populates itself from whatever locations users have typed in.
   const availableLocations = Array.from(
     new Set(
       contracts
@@ -394,7 +386,7 @@ export default function ContractsPage() {
   }
 
   const handleAddClick = () => {
-    if (userRole === 'technician') return // safety
+    if (userRole === 'technician') return
     if (subscriptionLoading) {
       toast.error("Checking your plan status, please try again in a moment...")
       return
@@ -432,9 +424,6 @@ export default function ContractsPage() {
 
       const displayed = (contractsData as Contract[]).map(contract => {
         const customer = (customersData as Customer[])?.find(c => c.id === contract.customer_id)
-        // Old-mode contracts have a manually-entered End Year saved directly in
-        // contract.end_date — show it as-is, don't recalculate it from start_date.
-        // New-mode contracts keep the existing auto-calculated behavior, unchanged.
         const endDate = contract.contract_type === 'old'
           ? (contract.end_date || null)
           : getContractEndDate(contract.start_date, contract.duration_years)
@@ -548,7 +537,6 @@ export default function ContractsPage() {
     }
   }
 
-  // Determine if the user is a technician
   const isTechnician = userRole === 'technician'
 
   return (
@@ -565,7 +553,6 @@ export default function ContractsPage() {
               <Download className="mr-2 size-4" />
               Export PDF
             </Button>
-            {/* Hide Add Contract button for technicians */}
             {!isTechnician && (
               <Button onClick={handleAddClick} disabled={subscriptionLoading}>
                 <Plus className="mr-2 size-4" />
@@ -575,113 +562,107 @@ export default function ContractsPage() {
           </div>
         </div>
 
-        {/* Filters */}
-        <Card className="min-w-0">
-          <CardContent className="p-4 min-w-0">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center flex-wrap min-w-0">
-              <div className="relative flex-1 min-w-[150px]">
-                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Search contracts..."
-                  className="pl-10"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <div className="flex gap-2 flex-wrap">
-                <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="w-[140px] sm:w-[160px]">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="expired">Expired</SelectItem>
-                    <SelectItem value="today-servicing">Today Servicing</SelectItem>
-                    <SelectItem value="expiring-soon">Expiring Soon</SelectItem>
-                  </SelectContent>
-                </Select>
+        {/* ── Standalone Filter Bar (no card) ── */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-center flex-wrap min-w-0">
+          <div className="relative flex-1 min-w-[150px]">
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search contracts..."
+              className="pl-10"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-[140px] sm:w-[160px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="expired">Expired</SelectItem>
+                <SelectItem value="today-servicing">Today Servicing</SelectItem>
+                <SelectItem value="expiring-soon">Expiring Soon</SelectItem>
+              </SelectContent>
+            </Select>
 
-                {/* Month Filter */}
-                <Select value={filterMonth} onValueChange={setFilterMonth}>
-                  <SelectTrigger className="w-[140px] sm:w-[160px]">
-                    <SelectValue placeholder="Month" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MONTHS.map((month) => (
-                      <SelectItem key={month.value} value={month.value}>
-                        {month.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            <Select value={filterMonth} onValueChange={setFilterMonth}>
+              <SelectTrigger className="w-[140px] sm:w-[160px]">
+                <SelectValue placeholder="Month" />
+              </SelectTrigger>
+              <SelectContent>
+                {MONTHS.map((month) => (
+                  <SelectItem key={month.value} value={month.value}>
+                    {month.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-                {/* Location Filter — searchable combobox */}
-                <Popover open={locationPopoverOpen} onOpenChange={setLocationPopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={locationPopoverOpen}
-                      className="w-[140px] sm:w-[160px] justify-between font-normal"
-                    >
-                      <span className="truncate">
-                        {filterLocation === "all" ? "Location" : filterLocation}
-                      </span>
-                      <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[200px] p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Search location..." />
-                      <CommandList>
-                        <CommandEmpty>No location found.</CommandEmpty>
-                        <CommandGroup>
-                          <CommandItem
-                            value="all"
-                            onSelect={() => {
-                              setFilterLocation("all")
-                              setLocationPopoverOpen(false)
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 size-4",
-                                filterLocation === "all" ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            All Locations
-                          </CommandItem>
-                          {availableLocations.map((loc) => (
-                            <CommandItem
-                              key={loc}
-                              value={loc}
-                              onSelect={() => {
-                                setFilterLocation(filterLocation === loc ? "all" : loc)
-                                setLocationPopoverOpen(false)
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 size-4",
-                                  filterLocation === loc ? "opacity-100" : "opacity-0"
-                                )}
-                              />
-                              <span className="truncate">{loc}</span>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            <Popover open={locationPopoverOpen} onOpenChange={setLocationPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={locationPopoverOpen}
+                  className="w-[140px] sm:w-[160px] justify-between font-normal"
+                >
+                  <span className="truncate">
+                    {filterLocation === "all" ? "Location" : filterLocation}
+                  </span>
+                  <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[200px] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Search location..." />
+                  <CommandList>
+                    <CommandEmpty>No location found.</CommandEmpty>
+                    <CommandGroup>
+                      <CommandItem
+                        value="all"
+                        onSelect={() => {
+                          setFilterLocation("all")
+                          setLocationPopoverOpen(false)
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 size-4",
+                            filterLocation === "all" ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        All Locations
+                      </CommandItem>
+                      {availableLocations.map((loc) => (
+                        <CommandItem
+                          key={loc}
+                          value={loc}
+                          onSelect={() => {
+                            setFilterLocation(filterLocation === loc ? "all" : loc)
+                            setLocationPopoverOpen(false)
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 size-4",
+                              filterLocation === loc ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          <span className="truncate">{loc}</span>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+        </div>
 
-        {/* ── DESKTOP: All Contracts table (unchanged) ── */}
+        {/* ── DESKTOP: All Contracts table ── */}
         <Card className="hidden md:block min-w-0 w-full">
           <CardHeader>
             <CardTitle>All Contracts</CardTitle>
@@ -775,7 +756,7 @@ export default function ContractsPage() {
           </CardContent>
         </Card>
 
-        {/* ── MOBILE: Individual contract cards (new design) ── */}
+        {/* ── MOBILE: Individual contract cards ── */}
         <div className="flex flex-col gap-4 md:hidden">
           {loading ? (
             <div className="text-center py-8 text-muted-foreground">Loading contracts...</div>
@@ -799,7 +780,6 @@ export default function ContractsPage() {
                   <Card key={contract.id} className="relative">
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between gap-2">
-                        {/* Left: icon + name + customer */}
                         <div className="flex items-center gap-3 min-w-0">
                           <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                             <FileText className="size-5 text-primary" />
@@ -813,8 +793,6 @@ export default function ContractsPage() {
                             </CardDescription>
                           </div>
                         </div>
-
-                        {/* Right: status badge + 3-dot menu */}
                         <div className="flex items-center gap-1 shrink-0">
                           {getStatusBadge(days, contract.status)}
                           {!isTechnician && (
@@ -843,9 +821,7 @@ export default function ContractsPage() {
                         </div>
                       </div>
                     </CardHeader>
-
                     <CardContent className="space-y-3">
-                      {/* Details grid — 2 columns */}
                       <div className="grid grid-cols-2 gap-x-4 gap-y-3">
                         <div>
                           <p className="text-xs text-muted-foreground mb-0.5">Frequency</p>
@@ -872,8 +848,6 @@ export default function ContractsPage() {
                           <p className="text-sm font-medium">{contract.endDate || '—'}</p>
                         </div>
                       </div>
-
-                      {/* Footer: view button */}
                       <div className="flex items-center justify-between pt-2 border-t border-border">
                         <div className="text-xs text-muted-foreground truncate">
                           {contract.location || ''}
