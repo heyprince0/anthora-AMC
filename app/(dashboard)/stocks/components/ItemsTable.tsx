@@ -460,7 +460,7 @@ export default function ItemsTable({
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => onEditItem(item)}>
                               <Edit className="mr-2 size-4" />
-                              Edit
+                              View
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleHistoryClick(item)}>
                               <History className="mr-2 size-4" />
@@ -492,16 +492,17 @@ export default function ItemsTable({
                           <span className="text-sm font-normal text-muted-foreground">{item.unit}</span>
                         </p>
                       </div>
-                      {/* Min level removed */}
                     </div>
 
-                    {/* Details grid */}
+                    {/* Details grid – conditionally hide Category if missing */}
                     <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-0.5">Category</p>
-                        <p className="text-sm font-medium">{category?.name || "—"}</p>
-                      </div>
-                      <div>
+                      {category?.name && (
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-0.5">Category</p>
+                          <p className="text-sm font-medium">{category.name}</p>
+                        </div>
+                      )}
+                      <div className={category?.name ? "" : "col-span-2"}>
                         <p className="text-xs text-muted-foreground mb-0.5">Selling Price</p>
                         <p className="text-sm font-medium">{formatINR(item.selling_price)}</p>
                       </div>
