@@ -37,6 +37,18 @@ function getContractEndDate(startDate: string | null, durationYears: number | nu
   return end.toISOString().split('T')[0]
 }
 
+// Helper to format dates as "dd MMM yyyy"
+function formatDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return '—'
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return dateStr
+  return d.toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
 function getStatusBadge(days: number, status: string) {
   if (days < 0) {
     return <Badge className="bg-alert-overdue/10 text-alert-overdue border-alert-overdue/20">Expired</Badge>
@@ -213,7 +225,7 @@ export default function CustomerDetailPage() {
           </div>
         </div>
 
-        {/* Customer Info Card (unchanged) */}
+        {/* Customer Info Card */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -305,9 +317,9 @@ export default function CustomerDetailPage() {
                               ? `₹${contract.contracts_price.toLocaleString('en-IN')}`
                               : '—'}
                           </TableCell>
-                          <TableCell>{contract.endDate || '—'}</TableCell>
-                          <TableCell>{contract.start_date}</TableCell>
-                          <TableCell>{contract.next_service_date}</TableCell>
+                          <TableCell>{formatDate(contract.endDate)}</TableCell>
+                          <TableCell>{formatDate(contract.start_date)}</TableCell>
+                          <TableCell>{formatDate(contract.next_service_date)}</TableCell>
                           <TableCell>{getStatusBadge(contract.daysUntilService, contract.status)}</TableCell>
                         </TableRow>
                       )
@@ -358,15 +370,15 @@ export default function CustomerDetailPage() {
                     <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
                       <div>
                         <p className="text-xs text-muted-foreground mb-0.5">Contract End</p>
-                        <p className="text-sm font-medium">{contract.endDate || '—'}</p>
+                        <p className="text-sm font-medium">{formatDate(contract.endDate)}</p>
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground mb-0.5">Last Service</p>
-                        <p className="text-sm font-medium">{contract.start_date}</p>
+                        <p className="text-sm font-medium">{formatDate(contract.start_date)}</p>
                       </div>
                       <div className="col-span-2">
                         <p className="text-xs text-muted-foreground mb-0.5">Next Service</p>
-                        <p className="text-sm font-medium">{contract.next_service_date}</p>
+                        <p className="text-sm font-medium">{formatDate(contract.next_service_date)}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -409,7 +421,7 @@ export default function CustomerDetailPage() {
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Calendar className="size-4 text-muted-foreground" />
-                            {record.service_date}
+                            {formatDate(record.service_date)}
                           </div>
                         </TableCell>
                         <TableCell>{record.technicianName}</TableCell>
@@ -428,7 +440,7 @@ export default function CustomerDetailPage() {
           </CardContent>
         </Card>
 
-        {/* ── MOBILE: Service History Cards ── */}
+        {/* ── MOBILE: Service History Cards with separate labels ── */}
         <div className="flex flex-col gap-4 md:hidden">
           <div>
             <h2 className="text-lg font-semibold">Service History</h2>
@@ -451,20 +463,21 @@ export default function CustomerDetailPage() {
                       </div>
                       <div className="min-w-0">
                         <CardTitle className="text-sm font-semibold leading-tight truncate">
-                          {record.service_date}
+                          {formatDate(record.service_date)}
                         </CardTitle>
-                        <CardDescription className="text-xs truncate mt-0.5">
-                          {record.technicianName}
-                        </CardDescription>
                       </div>
                     </div>
                     {getServiceStatusBadge(record.status)}
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-2.5">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-0.5">Technician</p>
+                    <p className="text-sm font-medium">{record.technicianName}</p>
+                  </div>
                   {record.notes && (
                     <div>
-                      <p className="text-xs text-muted-foreground mb-0.5">Notes</p>
+                      <p className="text-xs text-muted-foreground mb-0.5">Note</p>
                       <p className="text-sm font-medium line-clamp-2">{record.notes}</p>
                     </div>
                   )}
@@ -476,4 +489,4 @@ export default function CustomerDetailPage() {
       </div>
     </DashboardLayout>
   )
-            }
+                        }
