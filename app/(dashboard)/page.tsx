@@ -526,7 +526,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ── DESKTOP header: full layout (unchanged) ── */}
+        {/* ── DESKTOP header: full layout ── */}
         <div className="hidden md:flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
@@ -548,41 +548,59 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ── MOBILE: One compact summary Card (all 6 stats) ── */}
+        {/* ── MOBILE: Compact summary Card with icons ── */}
         <div className="md:hidden">
           <Card>
             <CardContent className="p-4">
               <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-0.5">Active Contracts</p>
-                  <p className="text-2xl font-bold">{loading ? "—" : stats.contracts}</p>
+                <div className="flex items-center gap-3">
+                  <FileText className="size-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-0.5">Active Contracts</p>
+                    <p className="text-2xl font-bold">{loading ? "—" : stats.contracts}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-0.5">This Month</p>
-                  <p className="text-2xl font-bold">{loading ? "—" : stats.monthServicing}</p>
+                <div className="flex items-center gap-3">
+                  <CalendarClock className="size-5 text-blue-500" />
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-0.5">This Month</p>
+                    <p className="text-2xl font-bold">{loading ? "—" : stats.monthServicing}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-0.5">Expiring Soon</p>
-                  <p className="text-2xl font-bold text-amber-600">{loading ? "—" : stats.expiringSoon}</p>
+                <div className="flex items-center gap-3">
+                  <CalendarCheck className="size-5 text-amber-500" />
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-0.5">Expiring Soon</p>
+                    <p className="text-2xl font-bold text-amber-600">{loading ? "—" : stats.expiringSoon}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-0.5">Expired</p>
-                  <p className="text-2xl font-bold text-red-600">{loading ? "—" : stats.expired}</p>
+                <div className="flex items-center gap-3">
+                  <Clock className="size-5 text-red-500" />
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-0.5">Expired</p>
+                    <p className="text-2xl font-bold text-red-600">{loading ? "—" : stats.expired}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-0.5">Customers</p>
-                  <p className="text-2xl font-bold">{loading ? "—" : stats.customers}</p>
+                <div className="flex items-center gap-3">
+                  <Users className="size-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-0.5">Customers</p>
+                    <p className="text-2xl font-bold">{loading ? "—" : stats.customers}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-0.5">Technicians</p>
-                  <p className="text-2xl font-bold">{loading ? "—" : stats.technicians}</p>
+                <div className="flex items-center gap-3">
+                  <Wrench className="size-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-0.5">Technicians</p>
+                    <p className="text-2xl font-bold">{loading ? "—" : stats.technicians}</p>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* ── DESKTOP: 6 StatCards grid (unchanged) ── */}
+        {/* ── DESKTOP: 6 StatCards grid ── */}
         <div className="hidden md:grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
           <StatCard title="Active Contracts" value={stats.contracts} icon={FileText} description="Total" />
           <StatCard title="This Month Servicing" value={stats.monthServicing} icon={CalendarClock} description="This month" iconClassName="bg-alert-due-today/10" />
@@ -592,7 +610,7 @@ export default function DashboardPage() {
           <StatCard title="Technicians" value={stats.technicians} icon={Wrench} description="Available" />
         </div>
 
-        {/* ── Two-column section: Upcoming Services + Inventory Overview (unchanged) ── */}
+        {/* ── Two-column section: Upcoming Services + Inventory Overview ── */}
         <div className="grid gap-6 lg:grid-cols-2">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
