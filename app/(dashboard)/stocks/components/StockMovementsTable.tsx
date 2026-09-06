@@ -124,11 +124,21 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
     return suppliers.find((s) => s.id === id)?.name || "—"
   }
 
+  /**
+   * Display helper: show "Sell" instead of "Sold" in the UI only.
+   */
   const getDisplayReason = (reason: string) => {
     if (reason === "Sold") return "Sell"
     return reason
   }
 
+  /**
+   * CORRECTED LOGIC:
+   * - Purchase (in) → negative (cost)
+   * - Other in (Return, Adjustment) → positive (value added)
+   * - Sold (out) → positive (revenue)
+   * - Other out (Used, Damaged, etc.) → negative (loss)
+   */
   const getMovementTotal = (movement: StockMovement): { amount: number; sign: string; color: string } | null => {
     const item = getItem(movement.item_id)
     if (!item) return null
@@ -137,17 +147,22 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
 
     if (movement.movement_type === "in") {
       if (movement.reason === "Purchase") {
+        // Purchase → expense, negative
         const amount = qty * (item.purchase_price || 0)
         return { amount, sign: "-", color: "text-red-600" }
       } else {
+        // Other in (Return, Adjustment) → positive
         const amount = qty * (item.purchase_price || 0)
         return { amount, sign: "+", color: "text-green-600" }
       }
     } else {
+      // movement_type === "out"
       if (movement.reason === "Sold") {
+        // Sold → revenue, positive (selling price)
         const amount = qty * (item.selling_price || 0)
         return { amount, sign: "+", color: "text-green-600" }
       } else {
+        // Used, Damaged, Wasted, Expired, etc. → loss, negative
         const amount = qty * (item.purchase_price || 0)
         return { amount, sign: "-", color: "text-red-600" }
       }
@@ -178,6 +193,7 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
 
   const formatINR = (amount: number) => `₹${(amount || 0).toLocaleString("en-IN")}`
 
+  // Shared filters JSX
   const FiltersRow = (
     <div className="flex flex-col gap-4 md:flex-row md:items-center flex-wrap">
       <div className="relative flex-1 min-w-[150px]">
@@ -243,9 +259,12 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
   return (
     <div className="flex flex-col gap-4">
 
-      {/* ── DESKTOP: Card with table (no header) ── */}
+      {/* ── DESKTOP: wrapper Card with table ── */}
       <Card className="hidden md:block">
-        <CardContent className="flex flex-col gap-4 pt-6">
+        <CardHeader>
+          <CardTitle>Stock Movements</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
           {FiltersRow}
           <div className="border rounded-lg overflow-hidden">
             <Table>
@@ -315,8 +334,14 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
         </CardContent>
       </Card>
 
-      {/* ── MOBILE: Cards (no title) ── */}
+      {/* ── MOBILE: individual Cards per movement ── */}
       <div className="flex flex-col gap-4 md:hidden">
+        {/* Title */}
+        <div>
+          <h2 className="text-lg font-semibold">Stock Movements</h2>
+          <p className="text-sm text-muted-foreground">Complete audit ledger of all inventory movements</p>
+        </div>
+
         {/* Filters */}
         {FiltersRow}
 
@@ -336,6 +361,7 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
               <Card key={movement.id}>
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-2">
+                    {/* Left: colored icon + item name + date */}
                     <div className="flex items-center gap-3 min-w-0">
                       <div className={`flex size-11 shrink-0 items-center justify-center rounded-lg ${movement.movement_type === "in" ? "bg-green-500/10" : "bg-red-500/10"}`}>
                         {movement.movement_type === "in"
@@ -352,6 +378,8 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
                         </CardDescription>
                       </div>
                     </div>
+
+                    {/* Right: In/Out badge + quantity + total amount */}
                     <div className="flex flex-col items-end gap-0.5 shrink-0">
                       <div className="flex items-center gap-2">
                         <Badge className={movement.movement_type === "in" ? "bg-green-500/10 text-green-600 border-green-500/20" : "bg-red-500/10 text-red-600 border-red-500/20"}>
@@ -369,30 +397,40 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
                     </div>
                   </div>
                 </CardHeader>
+
                 <CardContent>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                    {/* Reason (always shown) – display "Sell" instead of "Sold" */}
                     <div>
                       <p className="text-xs text-muted-foreground mb-0.5">Reason</p>
                       <p className="text-sm font-medium">{getDisplayReason(movement.reason)}</p>
                     </div>
+
+                    {/* Technician – only if name is not "—" */}
                     {technicianName && technicianName !== "—" && (
                       <div>
                         <p className="text-xs text-muted-foreground mb-0.5">Technician</p>
                         <p className="text-sm font-medium">{technicianName}</p>
                       </div>
                     )}
+
+                    {/* Supplier – only if name is not "—" */}
                     {supplierName && supplierName !== "—" && (
                       <div>
                         <p className="text-xs text-muted-foreground mb-0.5">Supplier</p>
                         <p className="text-sm font-medium">{supplierName}</p>
                       </div>
                     )}
+
+                    {/* Customer – only if present and not "—" */}
                     {customerName && customerName.trim() !== "" && customerName !== "—" && (
                       <div>
                         <p className="text-xs text-muted-foreground mb-0.5">Customer</p>
                         <p className="text-sm font-medium">{customerName}</p>
                       </div>
                     )}
+
+                    {/* Notes – only if present */}
                     {movement.notes && (
                       <div className="col-span-2">
                         <p className="text-xs text-muted-foreground mb-0.5">Notes</p>
