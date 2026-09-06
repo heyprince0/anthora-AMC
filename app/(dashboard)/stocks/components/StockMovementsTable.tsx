@@ -44,6 +44,8 @@ interface StockMovement {
 interface InventoryItem {
   id: string
   name: string
+  purchase_price: number
+  selling_price: number
 }
 
 interface TechnicianOption {
@@ -86,7 +88,10 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
           .eq("org_id", orgId)
           .order("created_at", { ascending: false })
           .limit(200),
-        supabase.from("inventory_items").select("id, name").eq("org_id", orgId),
+        supabase
+          .from("inventory_items")
+          .select("id, name, purchase_price, selling_price")
+          .eq("org_id", orgId),
         supabase.from("technicians").select("id, name").eq("org_id", orgId),
         supabase.from("inventory_suppliers").select("id, name").eq("org_id", orgId),
       ])
@@ -108,9 +113,37 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
     }
   }
 
-  const getItemName = (itemId: string) => items.find((i) => i.id === itemId)?.name || "Unknown Item"
-  const getTechnicianName = (id: string | null) => { if (!id) return "—"; return technicians.find((t) => t.id === id)?.name || "—" }
-  const getSupplierName = (id: string | null) => { if (!id) return "—"; return suppliers.find((s) => s.id === id)?.name || "—" }
+  const getItem = (itemId: string) => items.find((i) => i.id === itemId)
+  const getItemName = (itemId: string) => getItem(itemId)?.name || "Unknown Item"
+  const getTechnicianName = (id: string | null) => {
+    if (!id) return "—"
+    return technicians.find((t) => t.id === id)?.name || "—"
+  }
+  const getSupplierName = (id: string | null) => {
+    if (!id) return "—"
+    return suppliers.find((s) => s.id === id)?.name || "—"
+  }
+
+  // Compute total amount for a movement
+  const getMovementTotal = (movement: StockMovement): { amount: number; sign: string; color: string } | null => {
+    const item = getItem(movement.item_id)
+    if (!item) return null
+
+    const quantity = movement.quantity
+    if (movement.movement_type === "in") {
+      const amount = quantity * (item.purchase_price || 0)
+      return { amount, sign: "+", color: "text-green-600" }
+    } else {
+      // movement_type === "out"
+      if (movement.reason === "Sold") {
+        const amount = quantity * (item.selling_price || 0)
+        return { amount, sign: "+", color: "text-green-600" }
+      } else {
+        const amount = quantity * (item.purchase_price || 0)
+        return { amount, sign: "-", color: "text-red-600" }
+      }
+    }
+  }
 
   const filteredMovements = movements.filter((movement) => {
     const itemName = getItemName(movement.item_id).toLowerCase()
@@ -134,7 +167,9 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
     })
   }
 
-  // Shared filters JSX — used in both desktop card and mobile section
+  const formatINR = (amount: number) => `₹${(amount || 0).toLocaleString("en-IN")}`
+
+  // Shared filters JSX
   const FiltersRow = (
     <div className="flex flex-col gap-4 md:flex-row md:items-center flex-wrap">
       <div className="relative flex-1 min-w-[150px]">
@@ -215,7 +250,8 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
                   <TableHead>Date &amp; Time</TableHead>
                   <TableHead>Item</TableHead>
                   <TableHead>Type</TableHead>
-                  <TableHead className="text-right">Quantity</TableHead>
+                  <TableHead className="text-right">Qty</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
                   <TableHead>Reason</TableHead>
                   <TableHead>Technician</TableHead>
                   <TableHead>Supplier</TableHead>
@@ -226,36 +262,48 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                       Loading stock movements...
                     </TableCell>
                   </TableRow>
                 ) : filteredMovements.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                       {emptyMessage}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredMovements.map((movement) => (
-                    <TableRow key={movement.id}>
-                      <TableCell className="text-sm whitespace-nowrap">{formatDate(movement.created_at)}</TableCell>
-                      <TableCell className="font-medium">{getItemName(movement.item_id)}</TableCell>
-                      <TableCell>
-                        <Badge className={movement.movement_type === "in" ? "bg-green-500/10 text-green-600 border-green-500/20" : "bg-red-500/10 text-red-600 border-red-500/20"}>
-                          {movement.movement_type === "in" ? "In" : "Out"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {movement.movement_type === "in" ? "+" : "-"}{movement.quantity}
-                      </TableCell>
-                      <TableCell className="text-sm">{movement.reason}</TableCell>
-                      <TableCell className="text-sm">{getTechnicianName(movement.technician_id)}</TableCell>
-                      <TableCell className="text-sm">{getSupplierName(movement.supplier_id)}</TableCell>
-                      <TableCell className="text-sm">{movement.customer_name || "—"}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground max-w-xs truncate">{movement.notes || "—"}</TableCell>
-                    </TableRow>
-                  ))
+                  filteredMovements.map((movement) => {
+                    const total = getMovementTotal(movement)
+                    return (
+                      <TableRow key={movement.id}>
+                        <TableCell className="text-sm whitespace-nowrap">{formatDate(movement.created_at)}</TableCell>
+                        <TableCell className="font-medium">{getItemName(movement.item_id)}</TableCell>
+                        <TableCell>
+                          <Badge className={movement.movement_type === "in" ? "bg-green-500/10 text-green-600 border-green-500/20" : "bg-red-500/10 text-red-600 border-red-500/20"}>
+                            {movement.movement_type === "in" ? "In" : "Out"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {movement.movement_type === "in" ? "+" : "-"}{movement.quantity}
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {total ? (
+                            <span className={total.color}>
+                              {total.sign}{formatINR(total.amount)}
+                            </span>
+                          ) : (
+                            "—"
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm">{movement.reason}</TableCell>
+                        <TableCell className="text-sm">{getTechnicianName(movement.technician_id)}</TableCell>
+                        <TableCell className="text-sm">{getSupplierName(movement.supplier_id)}</TableCell>
+                        <TableCell className="text-sm">{movement.customer_name || "—"}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground max-w-xs truncate">{movement.notes || "—"}</TableCell>
+                      </TableRow>
+                    )
+                  })
                 )}
               </TableBody>
             </Table>
@@ -280,68 +328,78 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
         ) : filteredMovements.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">{emptyMessage}</div>
         ) : (
-          filteredMovements.map((movement) => (
-            <Card key={movement.id}>
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between gap-2">
-                  {/* Left: colored icon + item name + date */}
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className={`flex size-11 shrink-0 items-center justify-center rounded-lg ${movement.movement_type === "in" ? "bg-green-500/10" : "bg-red-500/10"}`}>
-                      {movement.movement_type === "in"
-                        ? <ArrowUp className="size-5 text-green-600" />
-                        : <ArrowDown className="size-5 text-red-600" />
-                      }
+          filteredMovements.map((movement) => {
+            const total = getMovementTotal(movement)
+            return (
+              <Card key={movement.id}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-2">
+                    {/* Left: colored icon + item name + date */}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`flex size-11 shrink-0 items-center justify-center rounded-lg ${movement.movement_type === "in" ? "bg-green-500/10" : "bg-red-500/10"}`}>
+                        {movement.movement_type === "in"
+                          ? <ArrowUp className="size-5 text-green-600" />
+                          : <ArrowDown className="size-5 text-red-600" />
+                        }
+                      </div>
+                      <div className="min-w-0">
+                        <CardTitle className="text-sm font-semibold leading-tight truncate">
+                          {getItemName(movement.item_id)}
+                        </CardTitle>
+                        <CardDescription className="text-xs truncate mt-0.5">
+                          {formatDate(movement.created_at)}
+                        </CardDescription>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <CardTitle className="text-sm font-semibold leading-tight truncate">
-                        {getItemName(movement.item_id)}
-                      </CardTitle>
-                      <CardDescription className="text-xs truncate mt-0.5">
-                        {formatDate(movement.created_at)}
-                      </CardDescription>
-                    </div>
-                  </div>
 
-                  {/* Right: In/Out badge + quantity */}
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Badge className={movement.movement_type === "in" ? "bg-green-500/10 text-green-600 border-green-500/20" : "bg-red-500/10 text-red-600 border-red-500/20"}>
-                      {movement.movement_type === "in" ? "In" : "Out"}
-                    </Badge>
-                    <span className={`text-sm font-bold ${movement.movement_type === "in" ? "text-green-600" : "text-red-600"}`}>
-                      {movement.movement_type === "in" ? "+" : "-"}{movement.quantity}
-                    </span>
-                  </div>
-                </div>
-              </CardHeader>
-
-              <CardContent>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-0.5">Reason</p>
-                    <p className="text-sm font-medium">{movement.reason}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-0.5">Technician</p>
-                    <p className="text-sm font-medium">{getTechnicianName(movement.technician_id)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-0.5">Supplier</p>
-                    <p className="text-sm font-medium">{getSupplierName(movement.supplier_id)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-0.5">Customer</p>
-                    <p className="text-sm font-medium">{movement.customer_name || "—"}</p>
-                  </div>
-                  {movement.notes && (
-                    <div className="col-span-2">
-                      <p className="text-xs text-muted-foreground mb-0.5">Notes</p>
-                      <p className="text-sm font-medium">{movement.notes}</p>
+                    {/* Right: In/Out badge + quantity + total amount */}
+                    <div className="flex flex-col items-end gap-0.5 shrink-0">
+                      <div className="flex items-center gap-2">
+                        <Badge className={movement.movement_type === "in" ? "bg-green-500/10 text-green-600 border-green-500/20" : "bg-red-500/10 text-red-600 border-red-500/20"}>
+                          {movement.movement_type === "in" ? "In" : "Out"}
+                        </Badge>
+                        <span className={`text-sm font-bold ${movement.movement_type === "in" ? "text-green-600" : "text-red-600"}`}>
+                          {movement.movement_type === "in" ? "+" : "-"}{movement.quantity}
+                        </span>
+                      </div>
+                      {total && (
+                        <span className={`text-xs font-medium ${total.color}`}>
+                          {total.sign}{formatINR(total.amount)}
+                        </span>
+                      )}
                     </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))
+                  </div>
+                </CardHeader>
+
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-0.5">Reason</p>
+                      <p className="text-sm font-medium">{movement.reason}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-0.5">Technician</p>
+                      <p className="text-sm font-medium">{getTechnicianName(movement.technician_id)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-0.5">Supplier</p>
+                      <p className="text-sm font-medium">{getSupplierName(movement.supplier_id)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-0.5">Customer</p>
+                      <p className="text-sm font-medium">{movement.customer_name || "—"}</p>
+                    </div>
+                    {movement.notes && (
+                      <div className="col-span-2">
+                        <p className="text-xs text-muted-foreground mb-0.5">Notes</p>
+                        <p className="text-sm font-medium">{movement.notes}</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })
         )}
       </div>
     </div>
