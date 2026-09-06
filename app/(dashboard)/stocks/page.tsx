@@ -17,6 +17,8 @@ import {
   ArrowLeftRight,
   FolderTree,
   RefreshCw,
+  Coins,
+  Calendar,
 } from "lucide-react"
 import { toast } from "sonner"
 import InventorySummaryStrip from "./components/InventorySummaryStrip"
@@ -269,25 +271,42 @@ export default function StocksPage() {
           </div>
         </div>
 
-        {/* ── MOBILE: Compact 3‑tile stats strip ── */}
-        <div className="grid grid-cols-3 gap-2 md:hidden">
-          <div className="rounded-lg border bg-card p-2.5 text-center">
-            <p className="text-lg font-bold leading-none">
+        {/* ── MOBILE: Full 5‑metric stats strip (same as desktop) ── */}
+        <div className="grid grid-cols-5 gap-2 md:hidden">
+          <div className="rounded-lg border bg-card p-2 text-center">
+            <Package className="mx-auto size-5 text-muted-foreground" />
+            <p className="mt-1 text-lg font-bold leading-none">
               {loading ? "—" : metrics?.totalItems ?? 0}
             </p>
-            <p className="mt-1 text-[11px] text-muted-foreground">Total</p>
+            <p className="mt-0.5 text-[10px] text-muted-foreground">Total</p>
           </div>
-          <div className="rounded-lg border bg-card p-2.5 text-center">
-            <p className="text-lg font-bold leading-none text-amber-600">
+          <div className="rounded-lg border bg-card p-2 text-center">
+            <AlertTriangle className="mx-auto size-5 text-amber-500" />
+            <p className="mt-1 text-lg font-bold leading-none text-amber-600">
               {loading ? "—" : metrics?.lowStockCount ?? 0}
             </p>
-            <p className="mt-1 text-[11px] text-muted-foreground">Low Stock</p>
+            <p className="mt-0.5 text-[10px] text-muted-foreground">Low Stock</p>
           </div>
-          <div className="rounded-lg border bg-card p-2.5 text-center">
-            <p className="text-lg font-bold leading-none text-red-600">
+          <div className="rounded-lg border bg-card p-2 text-center">
+            <Minus className="mx-auto size-5 text-red-500" />
+            <p className="mt-1 text-lg font-bold leading-none text-red-600">
               {loading ? "—" : metrics?.outOfStockCount ?? 0}
             </p>
-            <p className="mt-1 text-[11px] text-muted-foreground">Out of Stock</p>
+            <p className="mt-0.5 text-[10px] text-muted-foreground">Out of Stock</p>
+          </div>
+          <div className="rounded-lg border bg-card p-2 text-center">
+            <Coins className="mx-auto size-5 text-green-500" />
+            <p className="mt-1 text-lg font-bold leading-none">
+              {loading ? "—" : formatINR(metrics?.totalInventoryValue ?? 0)}
+            </p>
+            <p className="mt-0.5 text-[10px] text-muted-foreground">Value</p>
+          </div>
+          <div className="rounded-lg border bg-card p-2 text-center">
+            <Calendar className="mx-auto size-5 text-blue-500" />
+            <p className="mt-1 text-lg font-bold leading-none">
+              {loading ? "—" : metrics?.partsUsedThisMonth ?? 0}
+            </p>
+            <p className="mt-0.5 text-[10px] text-muted-foreground">Parts Used</p>
           </div>
         </div>
 
@@ -327,7 +346,6 @@ export default function StocksPage() {
               <span className="text-xs text-muted-foreground hidden md:inline">
                 ({currentInventoryCount || 0})
               </span>
-              {/* Show count badge on mobile as a small number next to icon */}
               <span className="ml-1 text-xs font-semibold text-muted-foreground md:hidden">
                 {currentInventoryCount || 0}
               </span>
@@ -437,21 +455,6 @@ export default function StocksPage() {
             categories={categories}
             onRefresh={handleRefresh}
           />
-        )}
-
-        {/* ── MOBILE FAB: floating Add Item button (Items tab only) ── */}
-        {activeTab === "items" && (
-          <div className="fixed bottom-6 right-6 z-40 md:hidden">
-            <Button
-              onClick={handleAddItem}
-              disabled={limitsLoading}
-              size="icon"
-              className="h-14 w-14 rounded-full shadow-lg"
-            >
-              <Plus className="size-6" />
-              <span className="sr-only">Add Item</span>
-            </Button>
-          </div>
         )}
       </div>
     </DashboardLayout>
