@@ -483,8 +483,8 @@ export default function ItemsTable({
                   </CardHeader>
 
                   <CardContent className="space-y-3">
-                    {/* Stock level — prominent highlight box (min level removed) */}
-                    <div className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2.5">
+                    {/* Stock level — background removed */}
+                    <div className="flex items-center justify-between rounded-lg px-3 py-2.5">
                       <div>
                         <p className="text-xs text-muted-foreground mb-0.5">Current Stock</p>
                         <p className="text-lg font-bold leading-none">
