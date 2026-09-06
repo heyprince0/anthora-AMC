@@ -296,9 +296,6 @@ export default function InvoicesPage() {
         <Card>
           <CardHeader>
             <CardTitle>All Invoices</CardTitle>
-            <CardDescription>
-              You have {filteredInvoices.length} invoices {filterStatus !== "all" ? "matching filters" : "in total"}
-            </CardDescription>
           </CardHeader>
           <CardContent>
             {loading ? (

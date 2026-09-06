@@ -224,45 +224,37 @@ export default function ServiceHistoryPage() {
           </div>
         </div>
 
-        {/* Filter Bar */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center flex-wrap">
-              <div className="relative flex-1 min-w-[150px]">
-                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Search by customer, technician, or contract..."
-                  className="pl-10"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
+        {/* ── Standalone Filter Bar (no card) ── */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-center flex-wrap">
+          <div className="relative flex-1 min-w-[150px]">
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search by customer, technician, or contract..."
+              className="pl-10"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
 
-              {/* Month Filter */}
-              <Select value={filterMonth} onValueChange={setFilterMonth}>
-                <SelectTrigger className="w-[160px]">
-                  <SelectValue placeholder="Month" />
-                </SelectTrigger>
-                <SelectContent>
-                  {MONTHS.map((month) => (
-                    <SelectItem key={month.value} value={month.value}>
-                      {month.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
+          <Select value={filterMonth} onValueChange={setFilterMonth}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Month" />
+            </SelectTrigger>
+            <SelectContent>
+              {MONTHS.map((month) => (
+                <SelectItem key={month.value} value={month.value}>
+                  {month.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         {/* Desktop: Service History Table */}
         <Card className="hidden md:block">
           <CardHeader>
             <CardTitle>Service Records</CardTitle>
-            <CardDescription>
-              Showing {filteredRecords.length} records {searchTerm || filterMonth !== 'all' ? 'matching filters' : 'in total'}
-            </CardDescription>
           </CardHeader>
           <CardContent>
             {loading ? (

@@ -63,7 +63,7 @@ export default function TechniciansPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingTechnician, setEditingTechnician] = useState<Technician | null>(null)
   const [currentOrgId, setCurrentOrgId] = useState<string | null>(null)
-  const [isChecking, setIsChecking] = useState(true) // <-- new loading state for redirect
+  const [isChecking, setIsChecking] = useState(true)
 
   const { maxTechnicians, currentTechnicianCount, status, planName, isLoading: limitsLoading } = usePlanLimits(currentOrgId)
 
@@ -74,7 +74,7 @@ export default function TechniciansPage() {
   // --- Redirect technician to own profile with loading ---
   useEffect(() => {
     if (!authLoading && user?.id && role === 'technician') {
-      setIsChecking(true) // show loading
+      setIsChecking(true)
       const checkLink = async () => {
         const { data, error } = await supabase
           .from('technicians')
@@ -84,14 +84,13 @@ export default function TechniciansPage() {
 
         if (!error && data?.id) {
           router.push(`/technicians/${data.id}`)
-          // component unmounts, no need to set isChecking false
         } else {
-          setIsChecking(false) // no link, hide loading
+          setIsChecking(false)
         }
       }
       checkLink()
     } else {
-      setIsChecking(false) // not a technician, hide loading
+      setIsChecking(false)
     }
   }, [authLoading, user?.id, role, router])
 
@@ -261,21 +260,17 @@ export default function TechniciansPage() {
           </Button>
         </div>
 
-        {/* Search */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search technicians by name or phone..."
-                className="pl-10"
-                value={searchTerm}
-                onChange={(e) => handleSearch(e.target.value)}
-              />
-            </div>
-          </CardContent>
-        </Card>
+        {/* ── Standalone Search Bar (no card) ── */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search technicians by name or phone..."
+            className="pl-10"
+            value={searchTerm}
+            onChange={(e) => handleSearch(e.target.value)}
+          />
+        </div>
 
         {/* Technicians Grid */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
