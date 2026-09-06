@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/table"
 import { supabase, type Customer, type Contract, type ServiceHistory, type Technician, getDaysUntilService } from "@/lib/supabase"
 import { useAuth } from "@/lib/auth-context"
-import { ArrowLeft, Phone, MapPin, Mail, FileText, Wrench, Calendar } from "lucide-react"
+import { ArrowLeft, Phone, MapPin, Mail, FileText, Wrench, Calendar, Package } from "lucide-react"
 import { toast } from "sonner"
 
 interface ServiceRecord extends ServiceHistory {
@@ -103,7 +103,6 @@ export default function CustomerDetailPage() {
     try {
       if (!currentOrgId) return
 
-      // Fetch customer
       const { data: customerData, error: customerError } = await supabase
         .from('customers')
         .select('*')
@@ -120,7 +119,6 @@ export default function CustomerDetailPage() {
 
       setCustomer(customerData as Customer)
 
-      // Fetch contracts for this customer
       const { data: contractsData, error: contractsError } = await supabase
         .from('contracts')
         .select('*')
@@ -129,9 +127,6 @@ export default function CustomerDetailPage() {
 
       if (contractsError) throw contractsError
 
-      // Compute endDate exactly like the Contracts page:
-      // - Old contracts: use stored end_date directly
-      // - New contracts: compute from start_date + duration_years
       const contractsWithExtra = (contractsData as Contract[]).map(contract => ({
         ...contract,
         daysUntilService: getDaysUntilService(contract.next_service_date),
@@ -142,7 +137,6 @@ export default function CustomerDetailPage() {
 
       setContracts(contractsWithExtra)
 
-      // Fetch service history for this customer's contracts
       if (contractsData && contractsData.length > 0) {
         const contractIds = (contractsData as Contract[]).map(c => c.id)
         
@@ -154,7 +148,6 @@ export default function CustomerDetailPage() {
 
         if (historyError) throw historyError
 
-        // Fetch technicians to get names
         const { data: techniciansData } = await supabase
           .from('technicians')
           .select('*')
@@ -201,9 +194,7 @@ export default function CustomerDetailPage() {
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-6">
-        {/* Header with back button — hidden for technicians opening this via
-            the "View" button on their assigned job (they shouldn't navigate
-            back into the customers list) */}
+        {/* Header with back button — hidden for technicians */}
         <div className="flex items-center gap-4">
           {role !== 'technician' && (
             <Button
@@ -222,7 +213,7 @@ export default function CustomerDetailPage() {
           </div>
         </div>
 
-        {/* Customer Info Card */}
+        {/* Customer Info Card (unchanged) */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -272,8 +263,8 @@ export default function CustomerDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Contracts Section - Updated to match Contracts page */}
-        <Card>
+        {/* ── DESKTOP: Active Contracts Table ── */}
+        <Card className="hidden md:block">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileText className="size-5" />
@@ -328,8 +319,65 @@ export default function CustomerDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Service History Section (unchanged) */}
-        <Card>
+        {/* ── MOBILE: Active Contracts Cards ── */}
+        <div className="flex flex-col gap-4 md:hidden">
+          <div>
+            <h2 className="text-lg font-semibold">Active Contracts</h2>
+            <p className="text-sm text-muted-foreground">
+              {contracts.length} contract{contracts.length !== 1 ? 's' : ''} associated with this customer
+            </p>
+          </div>
+          {contracts.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No contracts found for this customer
+            </div>
+          ) : (
+            contracts.map((contract) => {
+              const frequencyMonths = Math.round(contract.frequency_days / 30)
+              return (
+                <Card key={contract.id} className="relative">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                          <FileText className="size-5 text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                          <CardTitle className="text-sm font-semibold leading-tight truncate">
+                            {contract.contract_name}
+                          </CardTitle>
+                          <CardDescription className="text-xs truncate mt-0.5">
+                            {frequencyMonths} months · ₹{contract.contracts_price?.toLocaleString('en-IN') || '—'}
+                          </CardDescription>
+                        </div>
+                      </div>
+                      {getStatusBadge(contract.daysUntilService, contract.status)}
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-0.5">Contract End</p>
+                        <p className="text-sm font-medium">{contract.endDate || '—'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-0.5">Last Service</p>
+                        <p className="text-sm font-medium">{contract.start_date}</p>
+                      </div>
+                      <div className="col-span-2">
+                        <p className="text-xs text-muted-foreground mb-0.5">Next Service</p>
+                        <p className="text-sm font-medium">{contract.next_service_date}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })
+          )}
+        </div>
+
+        {/* ── DESKTOP: Service History Table ── */}
+        <Card className="hidden md:block">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Wrench className="size-5" />
@@ -379,7 +427,53 @@ export default function CustomerDetailPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* ── MOBILE: Service History Cards ── */}
+        <div className="flex flex-col gap-4 md:hidden">
+          <div>
+            <h2 className="text-lg font-semibold">Service History</h2>
+            <p className="text-sm text-muted-foreground">
+              {serviceHistory.length} service record{serviceHistory.length !== 1 ? 's' : ''} for this customer
+            </p>
+          </div>
+          {serviceHistory.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No service history found for this customer
+            </div>
+          ) : (
+            serviceHistory.map((record) => (
+              <Card key={record.id} className="relative">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <Calendar className="size-5 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <CardTitle className="text-sm font-semibold leading-tight truncate">
+                          {record.service_date}
+                        </CardTitle>
+                        <CardDescription className="text-xs truncate mt-0.5">
+                          {record.technicianName}
+                        </CardDescription>
+                      </div>
+                    </div>
+                    {getServiceStatusBadge(record.status)}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {record.notes && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-0.5">Notes</p>
+                      <p className="text-sm font-medium line-clamp-2">{record.notes}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
       </div>
     </DashboardLayout>
   )
-}
+            }
