@@ -19,7 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { supabase } from "@/lib/supabase"
-import { Plus, Search, MoreHorizontal, Edit, Trash2 } from "lucide-react"
+import { Plus, Search, MoreHorizontal, Edit, Trash2, FolderOpen } from "lucide-react"
 import { toast } from "sonner"
 import AddEditCategorySheet from "./AddEditCategorySheet"
 import {
@@ -37,7 +37,7 @@ interface Category {
   id: string
   org_id: string
   name: string
-  is_active: boolean          // added
+  is_active: boolean
   created_at: string
 }
 
@@ -73,12 +73,11 @@ export default function CategoriesTab({ orgId }: CategoriesTabProps) {
         .from("inventory_categories")
         .select("*")
         .eq("org_id", orgId)
-        .eq("is_active", true)          // only active
+        .eq("is_active", true)
         .order("created_at", { ascending: false })
 
       if (error) throw error
 
-      // Count active items per category
       const { data: itemsData, error: itemsError } = await supabase
         .from("inventory_items")
         .select("category_id")
@@ -120,7 +119,6 @@ export default function CategoriesTab({ orgId }: CategoriesTabProps) {
     if (!categoryToDelete) return
     setDeleting(true)
     try {
-      // Soft delete: set is_active = false
       const { error } = await supabase
         .from("inventory_categories")
         .update({ is_active: false })
@@ -129,7 +127,6 @@ export default function CategoriesTab({ orgId }: CategoriesTabProps) {
 
       if (error) throw error
 
-      // Remove from list
       setCategories(categories.filter((c) => c.id !== categoryToDelete.id))
       toast.success("Category deleted successfully")
       setDeleteDialogOpen(false)
@@ -157,63 +154,137 @@ export default function CategoriesTab({ orgId }: CategoriesTabProps) {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Categories</CardTitle>
-        <CardDescription>Manage inventory item categories</CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        {/* Filters */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-center">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search categories..."
-              className="pl-10"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+    <div className="flex flex-col gap-6">
+      {/* ── Filter Bar ── */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search categories..."
+                className="pl-10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <Button onClick={handleAddCategory}>
+              <Plus className="mr-2 size-4" />
+              Add Category
+            </Button>
           </div>
-          <Button onClick={handleAddCategory}>
-            <Plus className="mr-2 size-4" />
-            Add Category
-          </Button>
-        </div>
+        </CardContent>
+      </Card>
 
-        {/* Desktop / tablet table view - unchanged */}
-        <div className="hidden md:block border rounded-lg overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Category Name</TableHead>
-                <TableHead>Items</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
+      {/* ── DESKTOP: Table ── */}
+      <Card className="hidden md:block">
+        <CardHeader>
+          <CardTitle>Categories</CardTitle>
+          <CardDescription>Manage inventory item categories</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="border rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                    Loading categories...
-                  </TableCell>
+                  <TableHead>Category Name</TableHead>
+                  <TableHead>Items</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ) : filteredCategories.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                    {searchTerm ? "No categories found matching your search" : "No categories yet"}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredCategories.map((category) => (
-                  <TableRow key={category.id}>
-                    <TableCell className="font-medium">{category.name}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{category.itemCount}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {new Date(category.created_at).toLocaleDateString("en-IN")}
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                      Loading categories...
                     </TableCell>
-                    <TableCell className="text-right">
+                  </TableRow>
+                ) : filteredCategories.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                      {searchTerm ? "No categories found matching your search" : "No categories yet"}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredCategories.map((category) => (
+                    <TableRow key={category.id}>
+                      <TableCell className="font-medium">{category.name}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{category.itemCount}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {new Date(category.created_at).toLocaleDateString("en-IN")}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="size-8">
+                              <MoreHorizontal className="size-4" />
+                              <span className="sr-only">Actions</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEditCategory(category)}>
+                              <Edit className="mr-2 size-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setCategoryToDelete(category)
+                                setDeleteDialogOpen(true)
+                              }}
+                              className="text-red-600"
+                            >
+                              <Trash2 className="mr-2 size-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── MOBILE: Category Cards ── */}
+      <div className="flex flex-col gap-4 md:hidden">
+        {loading ? (
+          <div className="text-center py-8 text-muted-foreground">Loading categories...</div>
+        ) : filteredCategories.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            {searchTerm ? "No categories found matching your search" : "No categories yet"}
+          </div>
+        ) : (
+          <>
+            <p className="text-sm text-muted-foreground">
+              Showing{" "}
+              <span className="font-medium text-foreground">{filteredCategories.length}</span>{" "}
+              categories{" "}
+              {searchTerm ? "matching filters" : "in total"}
+            </p>
+
+            {filteredCategories.map((category) => (
+              <Card key={category.id} className="relative">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <FolderOpen className="size-5 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <CardTitle className="text-sm font-semibold leading-tight truncate">
+                          {category.name}
+                        </CardTitle>
+                        <CardDescription className="text-xs truncate mt-0.5">
+                          {category.itemCount} item{category.itemCount !== 1 && 's'}
+                        </CardDescription>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="size-8">
@@ -238,98 +309,55 @@ export default function CategoriesTab({ orgId }: CategoriesTabProps) {
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* Mobile card view - individual cards, same style as Customers page */}
-        <div className="grid gap-4 sm:grid-cols-2 md:hidden">
-          {loading ? (
-            <div className="text-center py-8 col-span-full text-muted-foreground">Loading categories...</div>
-          ) : filteredCategories.length === 0 ? (
-            <div className="text-center py-8 col-span-full text-muted-foreground">
-              {searchTerm ? "No categories found matching your search" : "No categories yet"}
-            </div>
-          ) : (
-            filteredCategories.map((category) => (
-              <Card key={category.id} className="relative">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 shrink-0">
-                        <span className="text-base font-semibold text-primary">
-                          {category.name.charAt(0)}
-                        </span>
-                      </div>
-                      <div className="min-w-0">
-                        <CardTitle className="text-sm truncate">{category.name}</CardTitle>
-                        <CardDescription className="text-xs truncate">
-                          {category.itemCount} items · {new Date(category.created_at).toLocaleDateString("en-IN")}
-                        </CardDescription>
-                      </div>
                     </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="size-8 shrink-0">
-                          <MoreHorizontal className="size-4" />
-                          <span className="sr-only">Actions</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleEditCategory(category)}>
-                          <Edit className="mr-2 size-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setCategoryToDelete(category)
-                            setDeleteDialogOpen(true)
-                          }}
-                          className="text-red-600"
-                        >
-                          <Trash2 className="mr-2 size-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                   </div>
                 </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-0.5">Created</p>
+                      <p className="text-sm font-medium">
+                        {new Date(category.created_at).toLocaleDateString("en-IN")}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-0.5">Items</p>
+                      <p className="text-sm font-medium">{category.itemCount}</p>
+                    </div>
+                  </div>
+                </CardContent>
               </Card>
-            ))
-          )}
-        </div>
+            ))}
+          </>
+        )}
+      </div>
 
-        {/* Add/Edit Category Sheet */}
-        <AddEditCategorySheet
-          open={sheetOpen}
-          onOpenChange={setSheetOpen}
-          editingCategory={editingCategory}
-          orgId={orgId}
-          onSuccess={handleSheetSuccess}
-        />
+      {/* Add/Edit Category Sheet */}
+      <AddEditCategorySheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        editingCategory={editingCategory}
+        orgId={orgId}
+        onSuccess={handleSheetSuccess}
+      />
 
-        {/* Delete Confirmation Dialog */}
-        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Category</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to delete &quot;{categoryToDelete?.name}&quot;? This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-red-600">
-                {deleting ? "Deleting..." : "Delete"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </CardContent>
-    </Card>
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Category</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{categoryToDelete?.name}&quot;? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-red-600">
+              {deleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   )
 }
