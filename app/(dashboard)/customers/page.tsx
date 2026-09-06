@@ -55,7 +55,7 @@ export default function CustomersPage() {
   const [allContracts, setAllContracts] = useState<Contract[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
-  const [filterLocation, setFilterLocation] = useState("all") // location filter, same as Contracts page
+  const [filterLocation, setFilterLocation] = useState("all")
   const [locationPopoverOpen, setLocationPopoverOpen] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
@@ -63,13 +63,10 @@ export default function CustomersPage() {
   const [customerToDelete, setCustomerToDelete] = useState<(Customer & { contractCount: number }) | null>(null)
   const [deleting, setDeleting] = useState(false)
 
-  // --- Org state ---
   const [currentOrgId, setCurrentOrgId] = useState<string | null>(null)
 
-  // Plan limits
   const { maxCustomers, currentCustomerCount, status, planName, isLoading: limitsLoading } = usePlanLimits(currentOrgId)
 
-  // Limit modal state
   const [showLimitModal, setShowLimitModal] = useState(false)
   const [limitModalType, setLimitModalType] = useState<'expired' | 'resource-limit'>('expired')
   const [limitModalCustom, setLimitModalCustom] = useState<{ title?: string; description?: string }>({})
@@ -97,8 +94,6 @@ export default function CustomersPage() {
       loadCustomers()
     }
   }, [currentOrgId])
-
-  // ✅ REMOVED: auto-show on page load – modal only triggers from button
 
   const loadCustomers = async () => {
     try {
@@ -135,9 +130,6 @@ export default function CustomersPage() {
     }
   }
 
-  // Distinct, non-empty locations pulled from existing contracts — the Location
-  // filter dropdown populates itself from whatever locations users have entered
-  // on their contracts, same as the Contracts page.
   const availableLocations = Array.from(
     new Set(
       allContracts
@@ -197,7 +189,6 @@ export default function CustomersPage() {
     }
   }
 
-  // ✅ Check limits – only called from Add button
   const checkAndShowLimitModal = () => {
     if (status === 'expired' || status === 'cancelled') {
       setLimitModalType('expired')
@@ -258,85 +249,78 @@ export default function CustomersPage() {
           </Button>
         </div>
 
-        {/* Search + Location Filter */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center flex-wrap">
-              <div className="relative flex-1 min-w-[150px]">
-                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Search customers by name, email, or phone..."
-                  className="pl-10"
-                  value={searchTerm}
-                  onChange={(e) => handleSearch(e.target.value)}
-                />
-              </div>
+        {/* ── Standalone Filter Bar (no card) ── */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-center flex-wrap">
+          <div className="relative flex-1 min-w-[150px]">
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search customers by name, email, or phone..."
+              className="pl-10"
+              value={searchTerm}
+              onChange={(e) => handleSearch(e.target.value)}
+            />
+          </div>
 
-              {/* Location Filter — searchable combobox. Options populate
-                  automatically from whatever locations users have entered
-                  on their contracts; typing filters the list live. */}
-              <Popover open={locationPopoverOpen} onOpenChange={setLocationPopoverOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={locationPopoverOpen}
-                    className="w-[160px] justify-between font-normal"
-                  >
-                    <span className="truncate">
-                      {filterLocation === "all" ? "Location" : filterLocation}
-                    </span>
-                    <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[200px] p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="Search location..." />
-                    <CommandList>
-                      <CommandEmpty>No location found.</CommandEmpty>
-                      <CommandGroup>
-                        <CommandItem
-                          value="all"
-                          onSelect={() => {
-                            setFilterLocation("all")
-                            setLocationPopoverOpen(false)
-                          }}
-                        >
-                          <Check
-                            className={cn(
-                              "mr-2 size-4",
-                              filterLocation === "all" ? "opacity-100" : "opacity-0"
-                            )}
-                          />
-                          All Locations
-                        </CommandItem>
-                        {availableLocations.map((loc) => (
-                          <CommandItem
-                            key={loc}
-                            value={loc}
-                            onSelect={() => {
-                              setFilterLocation(filterLocation === loc ? "all" : loc)
-                              setLocationPopoverOpen(false)
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 size-4",
-                                filterLocation === loc ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            <span className="truncate">{loc}</span>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            </div>
-          </CardContent>
-        </Card>
+          <Popover open={locationPopoverOpen} onOpenChange={setLocationPopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={locationPopoverOpen}
+                className="w-[160px] justify-between font-normal"
+              >
+                <span className="truncate">
+                  {filterLocation === "all" ? "Location" : filterLocation}
+                </span>
+                <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[200px] p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Search location..." />
+                <CommandList>
+                  <CommandEmpty>No location found.</CommandEmpty>
+                  <CommandGroup>
+                    <CommandItem
+                      value="all"
+                      onSelect={() => {
+                        setFilterLocation("all")
+                        setLocationPopoverOpen(false)
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 size-4",
+                          filterLocation === "all" ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      All Locations
+                    </CommandItem>
+                    {availableLocations.map((loc) => (
+                      <CommandItem
+                        key={loc}
+                        value={loc}
+                        onSelect={() => {
+                          setFilterLocation(filterLocation === loc ? "all" : loc)
+                          setLocationPopoverOpen(false)
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 size-4",
+                            filterLocation === loc ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        <span className="truncate">{loc}</span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </div>
 
         {/* Customers Grid */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -427,7 +411,6 @@ export default function CustomersPage() {
           />
         )}
 
-        {/* Limit Reached Modal – only shows when triggered by Add button */}
         <LimitReachedModal
           isOpen={showLimitModal}
           onClose={() => setShowLimitModal(false)}
@@ -437,7 +420,6 @@ export default function CustomersPage() {
           customDescription={limitModalCustom.description}
         />
 
-        {/* Delete Confirmation Dialog */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
