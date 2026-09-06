@@ -18,19 +18,17 @@ import {
 } from '@/components/ui/table'
 import { supabase, type Technician, type TechnicianJob, type Customer, type Contract, type ServiceHistory } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
-import { ArrowLeft, Phone, Wrench, Plus, CheckCircle2, Trash2, CalendarIcon, X, ScanBarcode, Camera, Loader2 } from 'lucide-react' // <-- added ScanBarcode
+import { ArrowLeft, Phone, Wrench, Plus, CheckCircle2, Trash2, CalendarIcon, X, ScanBarcode, Camera, Loader2, Eye } from 'lucide-react'
 import { toast } from 'sonner'
 import { AddTechnicianJobModal } from '@/components/add-technician-job-modal'
 import { Input } from '@/components/ui/input'
-import ScanBarcodeDialog from '../../stocks/components/ScanBarcodeDialog' // <-- import the dialog
+import ScanBarcodeDialog from '../../stocks/components/ScanBarcodeDialog'
 
 interface JobWithCustomer extends TechnicianJob {
   customerName: string | null
 }
 
-// Unified shape for the Job History table — combines manual/service-alert
-// completed technician_jobs rows with existing service_history rows,
-// without duplicating data into technician_jobs.
+// Unified shape for the Job History table
 interface HistoryDisplayItem {
   id: string
   completedDate: string | null
@@ -57,12 +55,9 @@ export default function TechnicianDetailPage() {
   const [isOwnProfile, setIsOwnProfile] = useState(false)
   const [statusEditMode, setStatusEditMode] = useState(false)
   const [statusValue, setStatusValue] = useState('')
-  // Date filter for Job History
   const [historyDateFilter, setHistoryDateFilter] = useState<string>('')
-  // How many job history rows are currently visible ("Load more" pagination)
   const HISTORY_PAGE_SIZE = 10
   const [historyVisibleCount, setHistoryVisibleCount] = useState<number>(HISTORY_PAGE_SIZE)
-  // Feedback dialog shown when marking a job complete — its text updates the job's notes
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false)
   const [jobToComplete, setJobToComplete] = useState<JobWithCustomer | null>(null)
   const [feedbackNotes, setFeedbackNotes] = useState('')
@@ -71,8 +66,6 @@ export default function TechnicianDetailPage() {
   const [isCompleting, setIsCompleting] = useState(false)
   const [photoModalUrl, setPhotoModalUrl] = useState<string | null>(null)
   const photoInputRef = useRef<HTMLInputElement>(null)
-
-  // <-- NEW: state for scan dialog
   const [scanDialogOpen, setScanDialogOpen] = useState(false)
 
   useEffect(() => {
@@ -93,10 +86,8 @@ export default function TechnicianDetailPage() {
     }
   }, [user?.id])
 
-  // ✅ FIX: Use linked_user_id instead of user_id for ownership
   useEffect(() => {
     if (currentOrgId && technicianId) {
-      // For technicians, redirect if trying to access another technician's profile
       if (role === 'technician' && user?.id) {
         supabase
           .from('technicians')
@@ -109,17 +100,14 @@ export default function TechnicianDetailPage() {
               router.push('/technicians')
               return
             }
-            // If the technician is linked to a different user, redirect to list
             if (data.linked_user_id && data.linked_user_id !== user.id) {
               router.push('/technicians')
               return
             }
-            // Allow access if linked_user_id is null or matches current user
             setIsOwnProfile(data.linked_user_id === user.id)
             loadTechnicianDetails()
           })
       } else {
-        // For non-technicians (admin, member), load details directly
         loadTechnicianDetails()
       }
     }
@@ -129,7 +117,6 @@ export default function TechnicianDetailPage() {
     try {
       if (!currentOrgId) return
 
-      // Fetch technician
       const { data: technicianData, error: technicianError } = await supabase
         .from('technicians')
         .select('*')
@@ -147,7 +134,6 @@ export default function TechnicianDetailPage() {
       setTechnician(technicianData as Technician)
       setStatusValue(technicianData.status)
 
-      // Fetch assigned jobs (pending)
       const { data: assignedJobsData, error: assignedJobsError } = await supabase
         .from('technician_jobs')
         .select('*')
@@ -158,7 +144,6 @@ export default function TechnicianDetailPage() {
 
       if (assignedJobsError) throw assignedJobsError
 
-      // Fetch customers (needed for both assigned jobs and history)
       const { data: customersData, error: customersError } = await supabase
         .from('customers')
         .select('*')
@@ -176,7 +161,7 @@ export default function TechnicianDetailPage() {
 
       setAssignedJobs(assignedJobsWithCustomer)
 
-      // Fetch job history — completed technician_jobs (manual + service_alert)
+      // Fetch completed technician_jobs
       const { data: historyJobsData, error: historyJobsError } = await supabase
         .from('technician_jobs')
         .select('*')
@@ -201,10 +186,7 @@ export default function TechnicianDetailPage() {
         }
       })
 
-      // Fetch job history — sync in existing service_history records for this
-      // technician (only ones where a technician was actually assigned;
-      // unassigned/unknown-technician records simply won't match here and
-      // stay untouched on the Service History page as before).
+      // Fetch service_history records for this technician
       const { data: serviceHistoryData, error: serviceHistoryError } = await supabase
         .from('service_history')
         .select('*')
@@ -248,13 +230,7 @@ export default function TechnicianDetailPage() {
         }
       })
 
-      // A job completed from a Service Alert assignment writes both a
-      // technician_jobs row (shown above via historyFromJobs) AND a
-      // service_history row for the same event, so the contract's next
-      // service date can roll forward. Without this filter, that single
-      // completion shows up twice in the table. Drop any service_history
-      // row that shares a contract + completed date with a job we're
-      // already showing — those are the auto-created duplicates.
+      // Deduplicate: remove service_history entries that match a job's contract+date
       const jobCompletionKeys = new Set(
         historyFromJobs
           .filter((item) => item.contractId && item.completedDate)
@@ -265,7 +241,6 @@ export default function TechnicianDetailPage() {
         return !jobCompletionKeys.has(`${item.contractId}|${item.completedDate}`)
       })
 
-      // Merge both sources, most recent first
       const combinedHistory = [...historyFromJobs, ...dedupedHistoryFromServiceHistory].sort((a, b) => {
         if (!a.completedDate) return 1
         if (!b.completedDate) return -1
@@ -316,7 +291,6 @@ export default function TechnicianDetailPage() {
     if (photoInputRef.current) photoInputRef.current.value = ''
   }
 
-  // Opens the feedback popup for a job before marking it complete
   const openCompleteDialog = (job: JobWithCustomer) => {
     setJobToComplete(job)
     setFeedbackNotes('')
@@ -324,12 +298,6 @@ export default function TechnicianDetailPage() {
     setCompleteDialogOpen(true)
   }
 
-  // Same update/toast/reload flow as before — just also writes the feedback
-  // text (if any) into the job's notes before marking it completed. If the
-  // job was created from a Service Alert assignment (has a contract_id),
-  // this also logs a service_history entry and pushes the contract's next
-  // service date forward — the same completion effect the alerts page's
-  // "Mark Complete" already produces — so the alert clears from that page too.
   const handleConfirmComplete = async () => {
     if (!currentOrgId || !jobToComplete || isCompleting) return
     setIsCompleting(true)
@@ -473,38 +441,28 @@ export default function TechnicianDetailPage() {
     }
   }
 
-  // Dot color for the technician's current status
   const getStatusDotColor = (status: string) => {
     switch (status) {
-      case 'available':
-        return 'bg-green-500'
-      case 'busy':
-        return 'bg-yellow-500'
-      case 'on-leave':
-        return 'bg-red-500'
-      default:
-        return 'bg-gray-400'
+      case 'available': return 'bg-green-500'
+      case 'busy': return 'bg-yellow-500'
+      case 'on-leave': return 'bg-red-500'
+      default: return 'bg-gray-400'
     }
   }
 
   const getSourceBadgeLabel = (source: HistoryDisplayItem['source']) => {
     switch (source) {
-      case 'service_alert':
-        return 'From Service Alert'
-      case 'service_history':
-        return 'Service Record'
-      default:
-        return 'Manual'
+      case 'service_alert': return 'From Service Alert'
+      case 'service_history': return 'Service Record'
+      default: return 'Manual'
     }
   }
 
-  // Filter job history by date
   const filteredHistory = useMemo(() => {
     if (!historyDateFilter) return jobHistory
     return jobHistory.filter(item => item.completedDate === historyDateFilter)
   }, [jobHistory, historyDateFilter])
 
-  // Only show the first `historyVisibleCount` rows; rest load via "View More"
   const visibleHistory = useMemo(() => {
     return filteredHistory.slice(0, historyVisibleCount)
   }, [filteredHistory, historyVisibleCount])
@@ -540,14 +498,13 @@ export default function TechnicianDetailPage() {
     )
   }
 
-  // Determine if we should show the back button – hide it for technicians viewing their own profile
   const showBackButton = !(role === 'technician' && isOwnProfile)
 
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-6">
-        {/* Header with back button – conditionally hidden for technicians */}
-        <div className="flex items-center justify-between"> {/* <-- changed to justify-between */}
+        {/* Header */}
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             {showBackButton && (
               <Button
@@ -565,7 +522,6 @@ export default function TechnicianDetailPage() {
               <p className="text-muted-foreground">Technician Details</p>
             </div>
           </div>
-          {/* <-- NEW: Scan Barcode button – only for technicians on their own profile */}
           {role === 'technician' && isOwnProfile && (
             <Button variant="outline" onClick={() => setScanDialogOpen(true)}>
               <ScanBarcode className="mr-2 size-4" />
@@ -681,7 +637,6 @@ export default function TechnicianDetailPage() {
               </div>
             ) : (
               <>
-                {/* Desktop/tablet table — unchanged, hidden on mobile */}
                 <div className="hidden md:block overflow-x-auto">
                   <Table>
                     <TableHeader>
@@ -721,7 +676,6 @@ export default function TechnicianDetailPage() {
                                 <CheckCircle2 className="size-4" />
                                 Complete
                               </Button>
-                              {/* View button — only when a customer is attached to this job */}
                               {job.customer_id && (
                                 <Button
                                   size="sm"
@@ -732,7 +686,6 @@ export default function TechnicianDetailPage() {
                                   View
                                 </Button>
                               )}
-                              {/* Delete button – only for non‑technicians */}
                               {role !== 'technician' && (
                                 <Button
                                   size="sm"
@@ -751,7 +704,6 @@ export default function TechnicianDetailPage() {
                   </Table>
                 </div>
 
-                {/* Mobile card view — same data/actions as the table above, shown only below md */}
                 <div className="flex flex-col gap-4 md:hidden">
                   {assignedJobs.map((job) => (
                     <Card key={job.id}>
@@ -838,68 +790,117 @@ export default function TechnicianDetailPage() {
                   : 'No completed jobs yet for this technician'}
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Completed Date</TableHead>
-                      <TableHead>Job Title</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Source</TableHead>
+              <>
+                {/* Desktop Table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Completed Date</TableHead>
+                        <TableHead>Job Title</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Source</TableHead>
                         <TableHead>Notes</TableHead>
                         <TableHead>Image</TableHead>
                       </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {visibleHistory.map((job) => (
-                      <TableRow key={job.id}>
-                        <TableCell>{job.completedDate || '—'}</TableCell>
-                        <TableCell className="font-medium">{job.title}</TableCell>
-                        <TableCell>{job.customerName || '—'}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-xs font-normal">
+                    </TableHeader>
+                    <TableBody>
+                      {visibleHistory.map((job) => (
+                        <TableRow key={job.id}>
+                          <TableCell>{job.completedDate || '—'}</TableCell>
+                          <TableCell className="font-medium">{job.title}</TableCell>
+                          <TableCell>{job.customerName || '—'}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="text-xs font-normal">
+                              {getSourceBadgeLabel(job.source)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm text-muted-foreground line-clamp-2">
+                              {job.notes || '—'}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            {job.photoUrl ? (
+                              <button
+                                type="button"
+                                onClick={() => setPhotoModalUrl(job.photoUrl)}
+                                className="block overflow-hidden rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                aria-label={`View photo for ${job.title}`}
+                              >
+                                <img src={job.photoUrl} alt="Completed work" className="size-10 rounded-md object-cover" />
+                              </button>
+                            ) : '—'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Mobile Cards */}
+                <div className="flex flex-col gap-4 md:hidden">
+                  {visibleHistory.map((job) => (
+                    <Card key={job.id}>
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                              <CheckCircle2 className="size-5 text-primary" />
+                            </div>
+                            <div className="min-w-0">
+                              <CardTitle className="truncate text-sm font-semibold">{job.title}</CardTitle>
+                              <CardDescription className="mt-0.5 truncate text-xs">{job.customerName || 'No customer'}</CardDescription>
+                            </div>
+                          </div>
+                          <Badge variant="outline" className="shrink-0 text-xs font-normal">
                             {getSourceBadgeLabel(job.source)}
                           </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm text-muted-foreground line-clamp-2">
-                            {job.notes || '—'}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          {job.photoUrl ? (
-                            <button
-                              type="button"
-                              onClick={() => setPhotoModalUrl(job.photoUrl)}
-                              className="block overflow-hidden rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                              aria-label={`View photo for ${job.title}`}
-                            >
-                              <img src={job.photoUrl} alt="Completed work" className="size-10 rounded-md object-cover" />
-                            </button>
-                          ) : '—'}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                          <div><p className="text-xs text-muted-foreground">Completed</p><p className="text-sm font-medium">{job.completedDate || '—'}</p></div>
+                          {job.photoUrl && (
+                            <div>
+                              <p className="text-xs text-muted-foreground">Photo</p>
+                              <button
+                                type="button"
+                                onClick={() => setPhotoModalUrl(job.photoUrl)}
+                                className="mt-1 block overflow-hidden rounded-md focus-visible:outline-none"
+                              >
+                                <img src={job.photoUrl} alt="Work photo" className="size-12 rounded-md object-cover" />
+                              </button>
+                            </div>
+                          )}
+                          <div className="col-span-2"><p className="text-xs text-muted-foreground">Notes</p><p className="text-sm font-medium line-clamp-2">{job.notes || '—'}</p></div>
+                        </div>
+                        <div className="flex items-center justify-between border-t border-border pt-2">
+                          <span className="text-xs text-muted-foreground">Job History</span>
+                          {/* Optionally, you can add a "View" link if there's a detail page */}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
 
-            {hasMoreHistory && (
-              <div className="flex justify-center mt-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleLoadMoreHistory}
-                >
-                  View More ({filteredHistory.length - historyVisibleCount} remaining)
-                </Button>
-              </div>
+                {hasMoreHistory && (
+                  <div className="flex justify-center mt-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleLoadMoreHistory}
+                    >
+                      View More ({filteredHistory.length - historyVisibleCount} remaining)
+                    </Button>
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
 
-        {/* Add Job Modal */}
+        {/* Modals and dialogs */}
         {user && currentOrgId && (
           <AddTechnicianJobModal
             open={modalOpen}
@@ -911,7 +912,6 @@ export default function TechnicianDetailPage() {
           />
         )}
 
-        {/* Complete Job — Feedback Dialog */}
         <Dialog open={completeDialogOpen} onOpenChange={setCompleteDialogOpen}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
@@ -980,13 +980,12 @@ export default function TechnicianDetailPage() {
           </DialogContent>
         </Dialog>
 
-        {/* <-- NEW: Scan Barcode Dialog – visible only when scanDialogOpen is true */}
         {currentOrgId && (
           <ScanBarcodeDialog
             open={scanDialogOpen}
             onOpenChange={setScanDialogOpen}
             orgId={currentOrgId}
-            categories={[]} // Technicians do not manage categories – the dialog works for scanning existing items
+            categories={[]}
             onRefresh={loadTechnicianDetails}
           />
         )}
