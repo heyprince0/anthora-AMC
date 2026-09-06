@@ -53,18 +53,17 @@ function ServiceAlertCard({
   return (
     <Card className={`border-l-4 ${borderColor} ${bgColor}`}>
       <CardContent className="p-4">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex-1 space-y-1">
-            <div className="flex items-center gap-2">
+        {/* Info row */}
+        <div className="flex flex-col gap-3">
+          <div className="flex-1 space-y-1.5">
+            <div className="flex items-center gap-2 flex-wrap">
               <h3 className="font-semibold text-card-foreground">{service.customer}</h3>
-              <Badge variant="outline" className="text-xs font-normal">
-                {service.serviceType}
-              </Badge>
+              <Badge variant="outline" className="text-xs font-normal">{service.serviceType}</Badge>
             </div>
             <p className="text-sm text-muted-foreground">{service.contract}</p>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
               <div className="flex items-center gap-1.5">
-                <Clock className="size-4" />
+                <Clock className="size-3.5 shrink-0" />
                 <span>
                   {variant === "overdue"
                     ? `${service.daysOverdue} days expired`
@@ -75,28 +74,34 @@ function ServiceAlertCard({
               </div>
               {service.technician && (
                 <div className="flex items-center gap-1.5">
-                  <span>Assigned to:</span>
+                  <span>Assigned:</span>
                   <span className="font-medium text-foreground">{service.technician}</span>
                 </div>
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
+
+          {/* Action buttons — full width on mobile, inline on desktop */}
+          <div className="flex gap-2 md:flex-row md:justify-end">
             <Button
               variant="outline"
               size="sm"
+              className="flex-1 md:flex-none"
               onClick={() => service.contractData && onAssignTechnician(service.contractData)}
             >
-              <UserPlus className="mr-2 size-4" />
-              {service.technician ? "Reassign" : "Assign Technician"}
+              <UserPlus className="mr-1.5 size-4 shrink-0" />
+              <span className="hidden sm:inline">{service.technician ? "Reassign" : "Assign Technician"}</span>
+              <span className="sm:hidden">{service.technician ? "Reassign" : "Assign"}</span>
             </Button>
             <Button
               variant="outline"
               size="sm"
+              className="flex-1 md:flex-none"
               onClick={() => service.contractData && onMarkComplete(service.contractData)}
             >
-              <CheckCircle2 className="mr-2 size-4" />
-              Mark Complete
+              <CheckCircle2 className="mr-1.5 size-4 shrink-0" />
+              <span className="hidden sm:inline">Mark Complete</span>
+              <span className="sm:hidden">Complete</span>
             </Button>
           </div>
         </div>
@@ -115,14 +120,11 @@ export default function ServiceAlertsPage() {
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null)
   const [currentOrgId, setCurrentOrgId] = useState<string | null>(null)
 
-  // Assign Technician modal state
   const [assignModalOpen, setAssignModalOpen] = useState(false)
   const [contractToAssign, setContractToAssign] = useState<Contract | null>(null)
 
-  // Plan limits
   const { status, plan, isLoading: limitsLoading } = usePlanLimits(currentOrgId)
 
-  // Limit modal state (same as Contracts page)
   const [showLimitModal, setShowLimitModal] = useState(false)
   const [limitModalType, setLimitModalType] = useState<LimitModalType>('expired')
   const [limitModalCustom, setLimitModalCustom] = useState<{ title?: string; description?: string }>({})
@@ -152,10 +154,8 @@ export default function ServiceAlertsPage() {
     if (currentOrgId) loadServices()
   }, [currentOrgId])
 
-  // Check limits on page load – similar to Contracts page
   useEffect(() => {
     if (limitsLoading || !currentOrgId || autoShown) return
-
     const isExpired = status === 'expired' || status === 'cancelled'
     if (isExpired) {
       setLimitModalType('expired')
@@ -168,7 +168,6 @@ export default function ServiceAlertsPage() {
     }
   }, [limitsLoading, status, plan, currentOrgId, autoShown])
 
-  // Check function for button clicks
   const checkAndShowLimitModal = (): boolean => {
     const isExpired = status === 'expired' || status === 'cancelled'
     if (isExpired) {
@@ -188,45 +187,33 @@ export default function ServiceAlertsPage() {
       if (!currentOrgId) return
 
       const { data: contractsData } = await supabase
-        .from("contracts")
-        .select("*")
-        .eq("org_id", currentOrgId)
+        .from("contracts").select("*").eq("org_id", currentOrgId)
 
       const { data: customersData } = await supabase
-        .from("customers")
-        .select("*")
-        .eq("org_id", currentOrgId)
+        .from("customers").select("*").eq("org_id", currentOrgId)
 
       const { data: assignedJobsData } = await supabase
-        .from("technician_jobs")
-        .select("*")
-        .eq("org_id", currentOrgId)
-        .eq("source", "service_alert")
-        .eq("status", "pending")
+        .from("technician_jobs").select("*").eq("org_id", currentOrgId)
+        .eq("source", "service_alert").eq("status", "pending")
 
       const { data: techniciansData } = await supabase
-        .from("technicians")
-        .select("*")
-        .eq("org_id", currentOrgId)
+        .from("technicians").select("*").eq("org_id", currentOrgId)
 
       const overdue: ServiceAlert[] = []
       const dueToday: ServiceAlert[] = []
       const upcoming: ServiceAlert[] = []
 
       for (const contract of (contractsData as Contract[]) || []) {
-        const customer = (customersData as Customer[])?.find((c) => c.id === contract.customer_id)
+        const customer = (customersData as Customer[])?.find(c => c.id === contract.customer_id)
         const days = getDaysUntilService(contract.next_service_date)
-
-        const assignedJob = ((assignedJobsData as TechnicianJob[]) || []).find(
-          (job) => job.contract_id === contract.id
-        )
+        const assignedJob = (assignedJobsData as TechnicianJob[])?.find(j => j.contract_id === contract.id)
         const assignedTechnician = assignedJob
-          ? (techniciansData as Technician[])?.find((t) => t.id === assignedJob.technician_id)
+          ? (techniciansData as Technician[])?.find(t => t.id === assignedJob.technician_id)
           : null
 
         const alert: ServiceAlert = {
           id: contract.id,
-          customer: customer?.name || "Unknown",
+          customer: customer?.name || "Unknown Customer",
           contract: contract.contract_name,
           serviceType: contract.service_type || "Service",
           dueDate: contract.next_service_date,
@@ -249,7 +236,6 @@ export default function ServiceAlertsPage() {
     }
   }
 
-  // Modified handlers with limit check
   const handleMarkComplete = (contract: Contract) => {
     if (checkAndShowLimitModal()) return
     setSelectedContract(contract)
@@ -265,7 +251,6 @@ export default function ServiceAlertsPage() {
   const handleAssignSuccess = () => loadServices()
   const handleModalSuccess = () => loadServices()
 
-  // Upgrade flow: open PlanSelectionModal instead of redirect
   const handleViewPlans = () => {
     setShowLimitModal(false)
     setShowPlanModal(true)
@@ -276,17 +261,55 @@ export default function ServiceAlertsPage() {
     setShowPlanModal(false)
   }
 
+  const totalAlerts = overdueServices.length + dueTodayServices.length + upcomingServices.length
+
   return (
     <DashboardLayout>
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-4 md:gap-6">
+
+        {/* ── MOBILE header: compact ── */}
+        <div className="flex items-center justify-between md:hidden">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Service Alerts</h1>
-            <p className="text-muted-foreground">Monitor and manage upcoming and overdue services</p>
+            <h1 className="text-xl font-bold text-foreground">Service Alerts</h1>
+            <p className="text-xs text-muted-foreground">
+              {loading ? "Loading..." : `${totalAlerts} alert${totalAlerts !== 1 ? "s" : ""} need attention`}
+            </p>
           </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
+        {/* ── DESKTOP header: full ── */}
+        <div className="hidden md:block">
+          <h1 className="text-2xl font-bold text-foreground">Service Alerts</h1>
+          <p className="text-muted-foreground">Monitor and manage upcoming and overdue services</p>
+        </div>
+
+        {/* ── MOBILE: compact 3-column stat row ── */}
+        <div className="grid grid-cols-3 gap-2 md:hidden">
+          <div className="rounded-lg border-l-4 border-l-alert-overdue bg-alert-overdue/5 p-3">
+            <div className="flex items-center gap-1.5 mb-1">
+              <AlertTriangle className="size-3.5 text-alert-overdue shrink-0" />
+              <p className="text-[11px] text-muted-foreground leading-tight">Expired</p>
+            </div>
+            <p className="text-2xl font-bold">{loading ? "—" : overdueServices.length}</p>
+          </div>
+          <div className="rounded-lg border-l-4 border-l-alert-due-today bg-alert-due-today/5 p-3">
+            <div className="flex items-center gap-1.5 mb-1">
+              <CalendarClock className="size-3.5 text-alert-due-today shrink-0" />
+              <p className="text-[11px] text-muted-foreground leading-tight">Today</p>
+            </div>
+            <p className="text-2xl font-bold">{loading ? "—" : dueTodayServices.length}</p>
+          </div>
+          <div className="rounded-lg border-l-4 border-l-alert-upcoming bg-alert-upcoming/5 p-3">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Clock className="size-3.5 text-alert-upcoming shrink-0" />
+              <p className="text-[11px] text-muted-foreground leading-tight">Soon</p>
+            </div>
+            <p className="text-2xl font-bold">{loading ? "—" : upcomingServices.length}</p>
+          </div>
+        </div>
+
+        {/* ── DESKTOP: full 3-card grid (unchanged) ── */}
+        <div className="hidden md:grid gap-4 sm:grid-cols-3">
           <Card className="border-l-4 border-l-alert-overdue bg-alert-overdue/5">
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
@@ -325,24 +348,31 @@ export default function ServiceAlertsPage() {
           </Card>
         </div>
 
+        {/* ── Tabs ── */}
         <Tabs defaultValue="overdue" className="w-full">
+          {/* Mobile: full-width 3-col tabs with short labels */}
           <TabsList className="grid w-full grid-cols-3 lg:w-[600px]">
-            <TabsTrigger value="overdue" className="flex items-center gap-2">
-              <span className="size-2 rounded-full bg-alert-overdue" />
-              Expired ({overdueServices.length})
+            <TabsTrigger value="overdue" className="flex items-center gap-1.5 text-xs sm:text-sm">
+              <span className="size-2 rounded-full bg-alert-overdue shrink-0" />
+              <span className="hidden sm:inline">Expired </span>
+              <span>({overdueServices.length})</span>
             </TabsTrigger>
-            <TabsTrigger value="today" className="flex items-center gap-2">
-              <span className="size-2 rounded-full bg-alert-due-today" />
-              Today ({dueTodayServices.length})
+            <TabsTrigger value="today" className="flex items-center gap-1.5 text-xs sm:text-sm">
+              <span className="size-2 rounded-full bg-alert-due-today shrink-0" />
+              <span className="hidden sm:inline">Today </span>
+              <span className="sm:hidden">Today </span>
+              <span>({dueTodayServices.length})</span>
             </TabsTrigger>
-            <TabsTrigger value="upcoming" className="flex items-center gap-2">
-              <span className="size-2 rounded-full bg-alert-upcoming" />
-              Expiring Soon ({upcomingServices.length})
+            <TabsTrigger value="upcoming" className="flex items-center gap-1.5 text-xs sm:text-sm">
+              <span className="size-2 rounded-full bg-alert-upcoming shrink-0" />
+              <span className="hidden sm:inline">Expiring Soon </span>
+              <span className="sm:hidden">Soon </span>
+              <span>({upcomingServices.length})</span>
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overdue" className="mt-6">
-            <div className="flex flex-col gap-4">
+          <TabsContent value="overdue" className="mt-4 md:mt-6">
+            <div className="flex flex-col gap-3 md:gap-4">
               {loading ? (
                 <div className="text-center py-8 text-muted-foreground">Loading...</div>
               ) : overdueServices.length === 0 ? (
@@ -361,8 +391,8 @@ export default function ServiceAlertsPage() {
             </div>
           </TabsContent>
 
-          <TabsContent value="today" className="mt-6">
-            <div className="flex flex-col gap-4">
+          <TabsContent value="today" className="mt-4 md:mt-6">
+            <div className="flex flex-col gap-3 md:gap-4">
               {loading ? (
                 <div className="text-center py-8 text-muted-foreground">Loading...</div>
               ) : dueTodayServices.length === 0 ? (
@@ -381,8 +411,8 @@ export default function ServiceAlertsPage() {
             </div>
           </TabsContent>
 
-          <TabsContent value="upcoming" className="mt-6">
-            <div className="flex flex-col gap-4">
+          <TabsContent value="upcoming" className="mt-4 md:mt-6">
+            <div className="flex flex-col gap-3 md:gap-4">
               {loading ? (
                 <div className="text-center py-8 text-muted-foreground">Loading...</div>
               ) : upcomingServices.length === 0 ? (
@@ -402,6 +432,7 @@ export default function ServiceAlertsPage() {
           </TabsContent>
         </Tabs>
 
+        {/* Modals — untouched */}
         {user && currentOrgId && (
           <MarkCompleteModal
             open={modalOpen}
@@ -423,7 +454,6 @@ export default function ServiceAlertsPage() {
           />
         )}
 
-        {/* Limit Reached Modal */}
         <LimitReachedModal
           isOpen={showLimitModal}
           onClose={() => setShowLimitModal(false)}
@@ -434,7 +464,6 @@ export default function ServiceAlertsPage() {
           customDescription={limitModalCustom.description}
         />
 
-        {/* Plan Selection Modal */}
         <PlanSelectionModal
           isOpen={showPlanModal}
           onClose={() => setShowPlanModal(false)}
