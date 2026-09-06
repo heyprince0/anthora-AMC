@@ -28,7 +28,6 @@ interface ContractDisplay extends Contract {
   endDate: string | null
 }
 
-// Helper to compute contract end date (same as Contracts page)
 function getContractEndDate(startDate: string | null, durationYears: number | null): string | null {
   if (!startDate || !durationYears || durationYears <= 0) return null
   const start = new Date(startDate)
@@ -37,41 +36,27 @@ function getContractEndDate(startDate: string | null, durationYears: number | nu
   return end.toISOString().split('T')[0]
 }
 
-// Helper to format dates as "dd MMM yyyy"
 function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return '—'
   const d = new Date(dateStr)
   if (isNaN(d.getTime())) return dateStr
-  return d.toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  })
+  return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
 function getStatusBadge(days: number, status: string) {
-  if (days < 0) {
-    return <Badge className="bg-alert-overdue/10 text-alert-overdue border-alert-overdue/20">Expired</Badge>
-  } else if (days === 0) {
-    return <Badge className="bg-alert-due-today/10 text-alert-due-today border-alert-due-today/20">Today</Badge>
-  } else if (days <= 3) {
-    return <Badge className="bg-alert-due-today/10 text-alert-due-today border-alert-due-today/20">Soon</Badge>
-  } else if (status === "active") {
-    return <Badge className="bg-alert-success/10 text-alert-success border-alert-success/20">Active</Badge>
-  }
+  if (days < 0) return <Badge className="bg-alert-overdue/10 text-alert-overdue border-alert-overdue/20">Expired</Badge>
+  if (days === 0) return <Badge className="bg-alert-due-today/10 text-alert-due-today border-alert-due-today/20">Today</Badge>
+  if (days <= 3) return <Badge className="bg-alert-due-today/10 text-alert-due-today border-alert-due-today/20">Soon</Badge>
+  if (status === "active") return <Badge className="bg-alert-success/10 text-alert-success border-alert-success/20">Active</Badge>
   return <Badge variant="outline">{status}</Badge>
 }
 
 function getServiceStatusBadge(status: string) {
   switch (status) {
-    case "completed":
-      return <Badge className="bg-alert-success/10 text-alert-success border-alert-success/20">Completed</Badge>
-    case "partial":
-      return <Badge className="bg-alert-due-today/10 text-alert-due-today border-alert-due-today/20">Partial</Badge>
-    case "cancelled":
-      return <Badge className="bg-alert-overdue/10 text-alert-overdue border-alert-overdue/20">Cancelled</Badge>
-    default:
-      return <Badge variant="outline">{status}</Badge>
+    case "completed": return <Badge className="bg-alert-success/10 text-alert-success border-alert-success/20 text-[11px] px-1.5 py-0">Completed</Badge>
+    case "partial": return <Badge className="bg-alert-due-today/10 text-alert-due-today border-alert-due-today/20 text-[11px] px-1.5 py-0">Partial</Badge>
+    case "cancelled": return <Badge className="bg-alert-overdue/10 text-alert-overdue border-alert-overdue/20 text-[11px] px-1.5 py-0">Cancelled</Badge>
+    default: return <Badge variant="outline" className="text-[11px] px-1.5 py-0">{status}</Badge>
   }
 }
 
@@ -106,9 +91,7 @@ export default function CustomerDetailPage() {
   }, [user?.id])
 
   useEffect(() => {
-    if (currentOrgId && customerId) {
-      loadCustomerDetails()
-    }
+    if (currentOrgId && customerId) loadCustomerDetails()
   }, [currentOrgId, customerId])
 
   const loadCustomerDetails = async () => {
@@ -116,11 +99,7 @@ export default function CustomerDetailPage() {
       if (!currentOrgId) return
 
       const { data: customerData, error: customerError } = await supabase
-        .from('customers')
-        .select('*')
-        .eq('id', customerId)
-        .eq('org_id', currentOrgId)
-        .single()
+        .from('customers').select('*').eq('id', customerId).eq('org_id', currentOrgId).single()
 
       if (customerError) throw customerError
       if (!customerData) {
@@ -132,10 +111,7 @@ export default function CustomerDetailPage() {
       setCustomer(customerData as Customer)
 
       const { data: contractsData, error: contractsError } = await supabase
-        .from('contracts')
-        .select('*')
-        .eq('customer_id', customerId)
-        .eq('org_id', currentOrgId)
+        .from('contracts').select('*').eq('customer_id', customerId).eq('org_id', currentOrgId)
 
       if (contractsError) throw contractsError
 
@@ -151,26 +127,18 @@ export default function CustomerDetailPage() {
 
       if (contractsData && contractsData.length > 0) {
         const contractIds = (contractsData as Contract[]).map(c => c.id)
-        
+
         const { data: historyData, error: historyError } = await supabase
-          .from('service_history')
-          .select('*')
-          .in('contract_id', contractIds)
-          .eq('org_id', currentOrgId)
+          .from('service_history').select('*').in('contract_id', contractIds).eq('org_id', currentOrgId)
 
         if (historyError) throw historyError
 
         const { data: techniciansData } = await supabase
-          .from('technicians')
-          .select('*')
-          .eq('org_id', currentOrgId)
+          .from('technicians').select('*').eq('org_id', currentOrgId)
 
         const historyWithTechnicianNames = (historyData as ServiceHistory[]).map(record => {
           const technician = (techniciansData as Technician[])?.find(t => t.id === record.technician_id)
-          return {
-            ...record,
-            technicianName: technician?.name || 'Unknown'
-          }
+          return { ...record, technicianName: technician?.name || 'Unknown' }
         })
 
         setServiceHistory(historyWithTechnicianNames)
@@ -206,15 +174,11 @@ export default function CustomerDetailPage() {
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-6">
-        {/* Header with back button — hidden for technicians */}
+
+        {/* Header with back button */}
         <div className="flex items-center gap-4">
           {role !== 'technician' && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => router.push('/customers')}
-              className="size-9"
-            >
+            <Button variant="ghost" size="icon" onClick={() => router.push('/customers')} className="size-9">
               <ArrowLeft className="size-4" />
               <span className="sr-only">Back to customers</span>
             </Button>
@@ -225,14 +189,12 @@ export default function CustomerDetailPage() {
           </div>
         </div>
 
-        {/* Customer Info Card */}
+        {/* Customer Info Card — unchanged */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <span className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
-                <span className="text-lg font-semibold text-primary">
-                  {customer.name.charAt(0)}
-                </span>
+                <span className="text-lg font-semibold text-primary">{customer.name.charAt(0)}</span>
               </span>
               Contact Information
             </CardTitle>
@@ -275,7 +237,7 @@ export default function CustomerDetailPage() {
           </CardContent>
         </Card>
 
-        {/* ── DESKTOP: Active Contracts Table ── */}
+        {/* ── DESKTOP: Active Contracts Table — unchanged ── */}
         <Card className="hidden md:block">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -288,9 +250,7 @@ export default function CustomerDetailPage() {
           </CardHeader>
           <CardContent>
             {contracts.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No contracts found for this customer
-              </div>
+              <div className="text-center py-8 text-muted-foreground">No contracts found for this customer</div>
             ) : (
               <div className="overflow-x-auto">
                 <Table>
@@ -331,7 +291,7 @@ export default function CustomerDetailPage() {
           </CardContent>
         </Card>
 
-        {/* ── MOBILE: Active Contracts Cards ── */}
+        {/* ── MOBILE: Active Contracts Cards — unchanged ── */}
         <div className="flex flex-col gap-4 md:hidden">
           <div>
             <h2 className="text-lg font-semibold">Active Contracts</h2>
@@ -340,9 +300,7 @@ export default function CustomerDetailPage() {
             </p>
           </div>
           {contracts.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No contracts found for this customer
-            </div>
+            <div className="text-center py-8 text-muted-foreground">No contracts found for this customer</div>
           ) : (
             contracts.map((contract) => {
               const frequencyMonths = Math.round(contract.frequency_days / 30)
@@ -388,7 +346,7 @@ export default function CustomerDetailPage() {
           )}
         </div>
 
-        {/* ── DESKTOP: Service History Table ── */}
+        {/* ── DESKTOP: Service History Table — unchanged ── */}
         <Card className="hidden md:block">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -401,9 +359,7 @@ export default function CustomerDetailPage() {
           </CardHeader>
           <CardContent>
             {serviceHistory.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No service history found for this customer
-              </div>
+              <div className="text-center py-8 text-muted-foreground">No service history found for this customer</div>
             ) : (
               <div className="overflow-x-auto">
                 <Table>
@@ -427,9 +383,7 @@ export default function CustomerDetailPage() {
                         <TableCell>{record.technicianName}</TableCell>
                         <TableCell>{getServiceStatusBadge(record.status)}</TableCell>
                         <TableCell className="max-w-[200px]">
-                          <span className="text-sm text-muted-foreground line-clamp-2">
-                            {record.notes || '—'}
-                          </span>
+                          <span className="text-sm text-muted-foreground line-clamp-2">{record.notes || '—'}</span>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -440,53 +394,62 @@ export default function CustomerDetailPage() {
           </CardContent>
         </Card>
 
-        {/* ── MOBILE: Service History Cards with separate labels ── */}
-        <div className="flex flex-col gap-4 md:hidden">
-          <div>
-            <h2 className="text-lg font-semibold">Service History</h2>
-            <p className="text-sm text-muted-foreground">
-              {serviceHistory.length} service record{serviceHistory.length !== 1 ? 's' : ''} for this customer
-            </p>
+        {/* ── MOBILE: Service History — compact timeline log ── */}
+        <div className="flex flex-col gap-3 md:hidden">
+          {/* Section header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-semibold flex items-center gap-1.5">
+                <Wrench className="size-4 text-muted-foreground" />
+                Service History
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {serviceHistory.length} record{serviceHistory.length !== 1 ? 's' : ''}
+              </p>
+            </div>
           </div>
+
           {serviceHistory.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No service history found for this customer
+            <div className="rounded-lg border bg-card px-4 py-8 text-center text-sm text-muted-foreground">
+              No service history found
             </div>
           ) : (
-            serviceHistory.map((record) => (
-              <Card key={record.id} className="relative">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                        <Calendar className="size-5 text-primary" />
-                      </div>
-                      <div className="min-w-0">
-                        <CardTitle className="text-sm font-semibold leading-tight truncate">
-                          {formatDate(record.service_date)}
-                        </CardTitle>
-                      </div>
-                    </div>
-                    {getServiceStatusBadge(record.status)}
+            /* Single contained list — divide-y between entries, NOT individual Cards */
+            <div className="rounded-lg border bg-card divide-y divide-border overflow-hidden">
+              {serviceHistory.map((record) => (
+                <div key={record.id} className="flex items-start gap-3 px-4 py-3">
+                  {/* Small timeline dot */}
+                  <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted mt-0.5">
+                    <Calendar className="size-3 text-muted-foreground" />
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-2.5">
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-0.5">Technician</p>
-                    <p className="text-sm font-medium">{record.technicianName}</p>
-                  </div>
-                  {record.notes && (
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-0.5">Note</p>
-                      <p className="text-sm font-medium line-clamp-2">{record.notes}</p>
+
+                  {/* Content */}
+                  <div className="min-w-0 flex-1">
+                    {/* Date + status on same row */}
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-medium">{formatDate(record.service_date)}</p>
+                      {getServiceStatusBadge(record.status)}
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))
+
+                    {/* Technician */}
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {record.technicianName}
+                    </p>
+
+                    {/* Notes — only if present */}
+                    {record.notes && (
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2 italic">
+                        {record.notes}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
+
       </div>
     </DashboardLayout>
   )
-                        }
+}
