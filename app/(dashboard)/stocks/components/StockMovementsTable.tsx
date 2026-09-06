@@ -368,7 +368,7 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
                       </div>
                     </div>
 
-                    {/* Right: In/Out badge + quantity + total amount */}
+                    {/* Right: In/Out badge + quantity + total amount (larger on mobile) */}
                     <div className="flex flex-col items-end gap-0.5 shrink-0">
                       <div className="flex items-center gap-2">
                         <Badge className={movement.movement_type === "in" ? "bg-green-500/10 text-green-600 border-green-500/20" : "bg-red-500/10 text-red-600 border-red-500/20"}>
@@ -379,7 +379,7 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
                         </span>
                       </div>
                       {total && (
-                        <span className={`text-xs font-medium ${total.color}`}>
+                        <span className={`text-sm font-semibold ${total.color}`}>
                           {total.sign}{formatINR(total.amount)}
                         </span>
                       )}
