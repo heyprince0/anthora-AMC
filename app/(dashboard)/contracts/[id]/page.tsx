@@ -39,6 +39,18 @@ function getContractEndDate(startDate: string | null, durationYears: number | nu
   return end.toISOString().split('T')[0]
 }
 
+// Helper to format dates as "dd MMM yyyy" (e.g., "15 Dec 2025")
+function formatDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return '—'
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return dateStr
+  return d.toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
 function getStatusBadge(days: number, status: string) {
   if (days < 0) {
     return <Badge className="bg-alert-overdue/10 text-alert-overdue border-alert-overdue/20">Expired</Badge>
@@ -105,7 +117,6 @@ export default function ContractDetailPage() {
     try {
       if (!currentOrgId) return
 
-      // Fetch contract
       const { data: contractData, error: contractError } = await supabase
         .from('contracts')
         .select('*')
@@ -120,7 +131,6 @@ export default function ContractDetailPage() {
         return
       }
 
-      // Fetch customer
       const { data: customerData, error: customerError } = await supabase
         .from('customers')
         .select('*')
@@ -145,7 +155,6 @@ export default function ContractDetailPage() {
         customerName: customerData?.name || 'Unknown'
       })
 
-      // Fetch service history for this contract
       const { data: historyData, error: historyError } = await supabase
         .from('service_history')
         .select('*')
@@ -154,7 +163,6 @@ export default function ContractDetailPage() {
 
       if (historyError) throw historyError
 
-      // Fetch technicians to get names
       const { data: techniciansData } = await supabase
         .from('technicians')
         .select('*')
@@ -261,7 +269,7 @@ export default function ContractDetailPage() {
                 <Calendar className="size-4 text-muted-foreground" />
                 <div>
                   <p className="text-xs text-muted-foreground">Service Frequency</p>
-                  <p className="font-medium text-foreground">{frequencyMonths} months</p>
+                  <p className="font-medium text-foreground">Every {frequencyMonths} months</p>
                 </div>
               </div>
 
@@ -281,7 +289,7 @@ export default function ContractDetailPage() {
                 <Calendar className="size-4 text-muted-foreground" />
                 <div>
                   <p className="text-xs text-muted-foreground">Contract End Date</p>
-                  <p className="font-medium text-foreground">{contract.endDate || '—'}</p>
+                  <p className="font-medium text-foreground">{formatDate(contract.endDate)}</p>
                 </div>
               </div>
 
@@ -289,7 +297,7 @@ export default function ContractDetailPage() {
                 <Calendar className="size-4 text-muted-foreground" />
                 <div>
                   <p className="text-xs text-muted-foreground">Last Service</p>
-                  <p className="font-medium text-foreground">{contract.start_date || '—'}</p>
+                  <p className="font-medium text-foreground">{formatDate(contract.start_date)}</p>
                 </div>
               </div>
 
@@ -297,7 +305,7 @@ export default function ContractDetailPage() {
                 <Calendar className="size-4 text-muted-foreground" />
                 <div>
                   <p className="text-xs text-muted-foreground">Next Service</p>
-                  <p className="font-medium text-foreground">{contract.next_service_date || '—'}</p>
+                  <p className="font-medium text-foreground">{formatDate(contract.next_service_date)}</p>
                 </div>
               </div>
 
@@ -330,7 +338,7 @@ export default function ContractDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Service History Section — same card UI/UX as Customer Details page */}
+        {/* Service History Section */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -363,7 +371,7 @@ export default function ContractDetailPage() {
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Calendar className="size-4 text-muted-foreground" />
-                            {record.service_date}
+                            {formatDate(record.service_date)}
                           </div>
                         </TableCell>
                         <TableCell>{record.technicianName}</TableCell>
