@@ -226,71 +226,67 @@ export default function ItemsTable({
 
   return (
     <div className="flex flex-col gap-6">
-      {/* ── Filter Bar ── */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center flex-wrap">
-            <div className="relative flex-1 min-w-[150px]">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search by name, SKU, or brand..."
-                className="pl-10"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-[130px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="in-stock">In Stock</SelectItem>
-                  <SelectItem value="low">Low Stock</SelectItem>
-                  <SelectItem value="out">Out of Stock</SelectItem>
-                </SelectContent>
-              </Select>
+      {/* ── Filter Bar (plain, no card) ── */}
+      <div className="flex flex-col gap-3 md:flex-row md:items-center flex-wrap">
+        <div className="relative flex-1 min-w-[150px]">
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search by name, SKU, or brand..."
+            className="pl-10"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-[130px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="in-stock">In Stock</SelectItem>
+              <SelectItem value="low">Low Stock</SelectItem>
+              <SelectItem value="out">Out of Stock</SelectItem>
+            </SelectContent>
+          </Select>
 
-              <Select value={filterCategory} onValueChange={setFilterCategory}>
-                <SelectTrigger className="w-[130px]">
-                  <SelectValue placeholder="Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <Select value={filterCategory} onValueChange={setFilterCategory}>
+            <SelectTrigger className="w-[130px]">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categories.map((cat) => (
+                <SelectItem key={cat.id} value={cat.id}>
+                  {cat.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-              <Select value={filterLocation} onValueChange={setFilterLocation}>
-                <SelectTrigger className="w-[130px]">
-                  <SelectValue placeholder="Location" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Locations</SelectItem>
-                  {locations.map((loc) => (
-                    <SelectItem key={loc} value={loc}>
-                      {loc}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <Select value={filterLocation} onValueChange={setFilterLocation}>
+            <SelectTrigger className="w-[130px]">
+              <SelectValue placeholder="Location" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Locations</SelectItem>
+              {locations.map((loc) => (
+                <SelectItem key={loc} value={loc}>
+                  {loc}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-              <Button onClick={onAddItem}>
-                <Plus className="mr-2 size-4" />
-                Add Item
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          <Button onClick={onAddItem}>
+            <Plus className="mr-2 size-4" />
+            Add Item
+          </Button>
+        </div>
+      </div>
 
-      {/* ── DESKTOP: Table (hidden on mobile) ── */}
+      {/* ── DESKTOP: Table inside a Card ── */}
       <Card className="hidden md:block">
         <CardHeader>
           <CardTitle>Inventory Items</CardTitle>
@@ -418,120 +414,131 @@ export default function ItemsTable({
               : "No inventory items yet"}
           </div>
         ) : (
-          filteredItems.map((item) => {
-            const stockStatus = getStockStatus(item.current_stock, item.min_stock_level)
-            const category = categories.find((c) => c.id === item.category_id)
+          <>
+            <p className="text-sm text-muted-foreground">
+              Showing{" "}
+              <span className="font-medium text-foreground">{filteredItems.length}</span>{" "}
+              items{" "}
+              {searchTerm || filterStatus !== "all" || filterCategory !== "all" || filterLocation !== "all"
+                ? "matching filters"
+                : "in total"}
+            </p>
 
-            return (
-              <Card key={item.id} className="relative">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between gap-2">
-                    {/* Left: icon + name + SKU/brand */}
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                        <Package className="size-5 text-primary" />
+            {filteredItems.map((item) => {
+              const stockStatus = getStockStatus(item.current_stock, item.min_stock_level)
+              const category = categories.find((c) => c.id === item.category_id)
+
+              return (
+                <Card key={item.id} className="relative">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between gap-2">
+                      {/* Left: icon + name + SKU/brand */}
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                          <Package className="size-5 text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                          <CardTitle className="text-sm font-semibold leading-tight truncate">
+                            {item.name}
+                          </CardTitle>
+                          <CardDescription className="text-xs truncate mt-0.5">
+                            {item.sku || "—"}{item.brand ? ` · ${item.brand}` : ""}
+                          </CardDescription>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <CardTitle className="text-sm font-semibold leading-tight truncate">
-                          {item.name}
-                        </CardTitle>
-                        <CardDescription className="text-xs truncate mt-0.5">
-                          {item.sku || "—"}{item.brand ? ` · ${item.brand}` : ""}
-                        </CardDescription>
+
+                      {/* Right: status badge + 3-dot menu */}
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Badge className={stockStatus.color}>{stockStatus.status}</Badge>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="size-8">
+                              <MoreHorizontal className="size-4" />
+                              <span className="sr-only">Actions</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => onEditItem(item)}>
+                              <Edit className="mr-2 size-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleHistoryClick(item)}>
+                              <History className="mr-2 size-4" />
+                              History
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setItemToDelete(item)
+                                setDeleteDialogOpen(true)
+                              }}
+                              className="text-red-600"
+                            >
+                              <Trash2 className="mr-2 size-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
+                  </CardHeader>
 
-                    {/* Right: status badge + 3-dot menu */}
-                    <div className="flex items-center gap-1 shrink-0">
-                      <Badge className={stockStatus.color}>{stockStatus.status}</Badge>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="size-8">
-                            <MoreHorizontal className="size-4" />
-                            <span className="sr-only">Actions</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => onEditItem(item)}>
-                            <Edit className="mr-2 size-4" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleHistoryClick(item)}>
-                            <History className="mr-2 size-4" />
-                            History
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setItemToDelete(item)
-                              setDeleteDialogOpen(true)
-                            }}
-                            className="text-red-600"
-                          >
-                            <Trash2 className="mr-2 size-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                </CardHeader>
-
-                <CardContent className="space-y-3">
-                  {/* Stock level — prominent highlight box (min level removed) */}
-                  <div className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2.5">
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-0.5">Current Stock</p>
-                      <p className="text-lg font-bold leading-none">
-                        {item.current_stock}{" "}
-                        <span className="text-sm font-normal text-muted-foreground">{item.unit}</span>
-                      </p>
-                    </div>
-                    {/* Min level removed */}
-                  </div>
-
-                  {/* Details grid */}
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-0.5">Category</p>
-                      <p className="text-sm font-medium">{category?.name || "—"}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-0.5">Selling Price</p>
-                      <p className="text-sm font-medium">{formatINR(item.selling_price)}</p>
-                    </div>
-                    {item.storage_location && (
-                      <div className="col-span-2">
-                        <p className="text-xs text-muted-foreground mb-0.5">Location</p>
-                        <p className="text-sm font-medium">{item.storage_location}</p>
+                  <CardContent className="space-y-3">
+                    {/* Stock level — prominent highlight box (min level removed) */}
+                    <div className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2.5">
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-0.5">Current Stock</p>
+                        <p className="text-lg font-bold leading-none">
+                          {item.current_stock}{" "}
+                          <span className="text-sm font-normal text-muted-foreground">{item.unit}</span>
+                        </p>
                       </div>
-                    )}
-                  </div>
+                      {/* Min level removed */}
+                    </div>
 
-                  {/* Stock In / Out buttons */}
-                  <div className="flex items-center gap-2 border-t border-border pt-2.5">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200"
-                      onClick={() => handleStockClick(item, "in")}
-                    >
-                      <ArrowUp className="mr-1.5 size-4" />
-                      Stock In
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-                      onClick={() => handleStockClick(item, "out")}
-                    >
-                      <ArrowDown className="mr-1.5 size-4" />
-                      Stock Out
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })
+                    {/* Details grid */}
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-0.5">Category</p>
+                        <p className="text-sm font-medium">{category?.name || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-0.5">Selling Price</p>
+                        <p className="text-sm font-medium">{formatINR(item.selling_price)}</p>
+                      </div>
+                      {item.storage_location && (
+                        <div className="col-span-2">
+                          <p className="text-xs text-muted-foreground mb-0.5">Location</p>
+                          <p className="text-sm font-medium">{item.storage_location}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Stock In / Out buttons */}
+                    <div className="flex items-center gap-2 border-t border-border pt-2.5">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200"
+                        onClick={() => handleStockClick(item, "in")}
+                      >
+                        <ArrowUp className="mr-1.5 size-4" />
+                        Stock In
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                        onClick={() => handleStockClick(item, "out")}
+                      >
+                        <ArrowDown className="mr-1.5 size-4" />
+                        Stock Out
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </>
         )}
       </div>
 
