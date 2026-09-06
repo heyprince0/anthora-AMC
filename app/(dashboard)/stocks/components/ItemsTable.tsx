@@ -169,7 +169,6 @@ export default function ItemsTable({
     applyFilters()
   }, [searchTerm, filterStatus, filterCategory, filterLocation, items])
 
-  // Unique, non-empty storage locations pulled from the current items list
   const locations = Array.from(
     new Set(
       items
@@ -182,7 +181,6 @@ export default function ItemsTable({
     if (!itemToDelete) return
     setDeleting(true)
     try {
-      // Soft delete: set is_active = false (preserves movement history)
       const { error } = await supabase
         .from("inventory_items")
         .update({ is_active: false })
@@ -225,11 +223,11 @@ export default function ItemsTable({
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 overflow-x-hidden">
       {/* ── Title (mobile only) ── */}
       <h2 className="text-lg font-semibold md:hidden">Inventory Items</h2>
 
-      {/* ── Filter Bar (plain, no card) ── */}
+      {/* ── Filter Bar ── */}
       <div className="flex flex-col gap-3 md:flex-row md:items-center flex-wrap">
         <div className="relative flex-1 min-w-[150px]">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -289,7 +287,7 @@ export default function ItemsTable({
         </div>
       </div>
 
-      {/* ── DESKTOP: Table inside a Card (title in CardHeader) ── */}
+      {/* ── DESKTOP Table ── */}
       <Card className="hidden md:block">
         <CardHeader>
           <CardTitle>Inventory Items</CardTitle>
@@ -405,7 +403,7 @@ export default function ItemsTable({
         </CardContent>
       </Card>
 
-      {/* ── MOBILE: Cards (title now above filter) ── */}
+      {/* ── MOBILE Cards ── */}
       <div className="flex flex-col gap-4 md:hidden">
         {loading ? (
           <div className="text-center py-8 text-muted-foreground">Loading inventory items...</div>
@@ -429,10 +427,11 @@ export default function ItemsTable({
                         <Package className="size-5 text-primary" />
                       </div>
                       <div className="min-w-0">
-                        <CardTitle className="text-sm font-semibold leading-tight truncate">
+                        {/* ── FIX: allow long names to wrap ── */}
+                        <CardTitle className="text-sm font-semibold leading-tight break-words">
                           {item.name}
                         </CardTitle>
-                        <CardDescription className="text-xs truncate mt-0.5">
+                        <CardDescription className="text-xs break-words mt-0.5">
                           {item.sku || "—"}{item.brand ? ` · ${item.brand}` : ""}
                         </CardDescription>
                       </div>
@@ -471,7 +470,6 @@ export default function ItemsTable({
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {/* ── Current Stock box with gray background ── */}
                   <div className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2.5">
                     <div>
                       <p className="text-xs text-muted-foreground mb-0.5">Current Stock</p>
@@ -528,7 +526,7 @@ export default function ItemsTable({
         )}
       </div>
 
-      {/* Dialogs (unchanged) */}
+      {/* Dialogs */}
       <StockInOutDialog
         open={stockDialogOpen}
         onOpenChange={setStockDialogOpen}
@@ -540,7 +538,7 @@ export default function ItemsTable({
 
       <StockHistoryDialog
         open={historyDialogOpen}
-        onOpenChange={setHistoryDialogOpen}
+        onOpenChange={setStockDialogOpen}
         item={historyItem}
         orgId={orgId}
       />
