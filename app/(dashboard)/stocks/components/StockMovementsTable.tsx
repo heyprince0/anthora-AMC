@@ -346,6 +346,9 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
         ) : (
           filteredMovements.map((movement) => {
             const total = getMovementTotal(movement)
+            const technicianName = getTechnicianName(movement.technician_id)
+            const supplierName = getSupplierName(movement.supplier_id)
+
             return (
               <Card key={movement.id}>
                 <CardHeader className="pb-3">
@@ -389,22 +392,35 @@ export default function StockMovementsTable({ orgId }: StockMovementsTableProps)
 
                 <CardContent>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                    {/* Reason (always shown) */}
                     <div>
                       <p className="text-xs text-muted-foreground mb-0.5">Reason</p>
                       <p className="text-sm font-medium">{movement.reason}</p>
                     </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-0.5">Technician</p>
-                      <p className="text-sm font-medium">{getTechnicianName(movement.technician_id)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-0.5">Supplier</p>
-                      <p className="text-sm font-medium">{getSupplierName(movement.supplier_id)}</p>
-                    </div>
+
+                    {/* Technician – only if name is not "—" */}
+                    {technicianName && technicianName !== "—" && (
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-0.5">Technician</p>
+                        <p className="text-sm font-medium">{technicianName}</p>
+                      </div>
+                    )}
+
+                    {/* Supplier – only if name is not "—" */}
+                    {supplierName && supplierName !== "—" && (
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-0.5">Supplier</p>
+                        <p className="text-sm font-medium">{supplierName}</p>
+                      </div>
+                    )}
+
+                    {/* Customer (always shown, falls back to "—") */}
                     <div>
                       <p className="text-xs text-muted-foreground mb-0.5">Customer</p>
                       <p className="text-sm font-medium">{movement.customer_name || "—"}</p>
                     </div>
+
+                    {/* Notes – only if present */}
                     {movement.notes && (
                       <div className="col-span-2">
                         <p className="text-xs text-muted-foreground mb-0.5">Notes</p>
