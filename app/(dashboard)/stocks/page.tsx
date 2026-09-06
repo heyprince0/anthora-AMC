@@ -252,7 +252,7 @@ export default function StocksPage() {
           </div>
         </div>
 
-        {/* ── DESKTOP header: full layout (unchanged) ── */}
+        {/* ── DESKTOP header: full layout ── */}
         <div className="hidden md:flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Inventory</h1>
@@ -269,8 +269,7 @@ export default function StocksPage() {
           </div>
         </div>
 
-        {/* ── MOBILE: Compact 3-tile stats strip ── */}
-        {/* Replaces the full InventorySummaryStrip on mobile so the tabs are immediately visible */}
+        {/* ── MOBILE: Compact 3‑tile stats strip ── */}
         <div className="grid grid-cols-3 gap-2 md:hidden">
           <div className="rounded-lg border bg-card p-2.5 text-center">
             <p className="text-lg font-bold leading-none">
@@ -303,24 +302,82 @@ export default function StocksPage() {
           </div>
         )}
 
-        {/* ── Tabs (visible immediately on mobile — no more scrolling past the strip) ── */}
+        {/* ── TABS – Improved for mobile navigation ── */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full justify-start overflow-x-auto sm:w-auto sm:justify-center">
-            <TabsTrigger value="items" className="flex shrink-0 items-center gap-1.5 whitespace-nowrap sm:gap-2 sm:px-4">
-              <Package className="size-4" />
-              <span>Items</span>
+          <TabsList
+            className={`
+              w-full justify-start overflow-x-auto scrollbar-hide
+              bg-transparent border-b border-border p-0 h-auto
+              md:justify-center md:bg-muted md:border-0 md:p-1 md:h-10
+            `}
+          >
+            <TabsTrigger
+              value="items"
+              className={`
+                flex-1 min-w-[80px] shrink-0 items-center gap-1.5
+                border-b-2 border-transparent rounded-none px-2 py-2.5
+                text-xs font-medium text-muted-foreground transition-all
+                data-[state=active]:border-primary data-[state=active]:text-primary
+                hover:text-foreground hover:border-muted-foreground/30
+                md:flex-none md:rounded-md md:border-0 md:px-4 md:py-1.5
+                md:data-[state=active]:bg-background md:data-[state=active]:shadow-sm
+                md:data-[state=active]:border-0
+              `}
+            >
+              <Package className="size-4 shrink-0" />
+              <span className="hidden sm:inline">Items</span>
+              <span className="sm:hidden">Items</span>
               <span className="text-xs text-muted-foreground">({currentInventoryCount || 0})</span>
             </TabsTrigger>
-            <TabsTrigger value="movements" className="flex shrink-0 items-center gap-1.5 whitespace-nowrap sm:gap-2 sm:px-4">
-              <ArrowLeftRight className="size-4" />
+
+            <TabsTrigger
+              value="movements"
+              className={`
+                flex-1 min-w-[80px] shrink-0 items-center gap-1.5
+                border-b-2 border-transparent rounded-none px-2 py-2.5
+                text-xs font-medium text-muted-foreground transition-all
+                data-[state=active]:border-primary data-[state=active]:text-primary
+                hover:text-foreground hover:border-muted-foreground/30
+                md:flex-none md:rounded-md md:border-0 md:px-4 md:py-1.5
+                md:data-[state=active]:bg-background md:data-[state=active]:shadow-sm
+                md:data-[state=active]:border-0
+              `}
+            >
+              <ArrowLeftRight className="size-4 shrink-0" />
               <span>Movements</span>
             </TabsTrigger>
-            <TabsTrigger value="categories" className="flex shrink-0 items-center gap-1.5 whitespace-nowrap sm:gap-2 sm:px-4">
-              <FolderTree className="size-4" />
+
+            <TabsTrigger
+              value="categories"
+              className={`
+                flex-1 min-w-[80px] shrink-0 items-center gap-1.5
+                border-b-2 border-transparent rounded-none px-2 py-2.5
+                text-xs font-medium text-muted-foreground transition-all
+                data-[state=active]:border-primary data-[state=active]:text-primary
+                hover:text-foreground hover:border-muted-foreground/30
+                md:flex-none md:rounded-md md:border-0 md:px-4 md:py-1.5
+                md:data-[state=active]:bg-background md:data-[state=active]:shadow-sm
+                md:data-[state=active]:border-0
+              `}
+            >
+              <FolderTree className="size-4 shrink-0" />
               <span>Categories</span>
             </TabsTrigger>
-            <TabsTrigger value="suppliers" className="flex shrink-0 items-center gap-1.5 whitespace-nowrap sm:gap-2 sm:px-4">
-              <Truck className="size-4" />
+
+            <TabsTrigger
+              value="suppliers"
+              className={`
+                flex-1 min-w-[80px] shrink-0 items-center gap-1.5
+                border-b-2 border-transparent rounded-none px-2 py-2.5
+                text-xs font-medium text-muted-foreground transition-all
+                data-[state=active]:border-primary data-[state=active]:text-primary
+                hover:text-foreground hover:border-muted-foreground/30
+                md:flex-none md:rounded-md md:border-0 md:px-4 md:py-1.5
+                md:data-[state=active]:bg-background md:data-[state=active]:shadow-sm
+                md:data-[state=active]:border-0
+              `}
+            >
+              <Truck className="size-4 shrink-0" />
               <span>Suppliers</span>
             </TabsTrigger>
           </TabsList>
@@ -339,21 +396,15 @@ export default function StocksPage() {
           </TabsContent>
 
           <TabsContent value="movements" className="mt-4">
-            {currentOrgId && (
-              <StockMovementsTable orgId={currentOrgId} />
-            )}
+            {currentOrgId && <StockMovementsTable orgId={currentOrgId} />}
           </TabsContent>
 
           <TabsContent value="categories" className="mt-4">
-            {currentOrgId && (
-              <CategoriesTab orgId={currentOrgId} />
-            )}
+            {currentOrgId && <CategoriesTab orgId={currentOrgId} />}
           </TabsContent>
 
           <TabsContent value="suppliers" className="mt-4">
-            {currentOrgId && (
-              <SuppliersTab orgId={currentOrgId} />
-            )}
+            {currentOrgId && <SuppliersTab orgId={currentOrgId} />}
           </TabsContent>
         </Tabs>
 
