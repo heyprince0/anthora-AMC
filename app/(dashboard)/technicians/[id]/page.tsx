@@ -526,7 +526,7 @@ export default function TechnicianDetailPage() {
           )}
         </div>
 
-        {/* Technician Info Card */}
+        {/* ── Technician Info Card ── */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -607,8 +607,8 @@ export default function TechnicianDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Assigned Jobs Section */}
-        <Card>
+        {/* ── DESKTOP: Assigned Jobs Table ── */}
+        <Card className="hidden md:block">
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <div>
               <CardTitle className="flex items-center gap-2">
@@ -632,115 +632,135 @@ export default function TechnicianDetailPage() {
                 No jobs assigned to this technician
               </div>
             ) : (
-              <>
-                <div className="hidden md:block overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Job Title</TableHead>
-                        <TableHead>Assigned Date</TableHead>
-                        <TableHead>Due Date</TableHead>
-                        <TableHead>Customer</TableHead>
-                        <TableHead>Notes</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {assignedJobs.map((job) => (
-                        <TableRow key={job.id}>
-                          <TableCell className="font-medium">{job.title}</TableCell>
-                          <TableCell>{job.assigned_date}</TableCell>
-                          <TableCell>{job.due_date || '—'}</TableCell>
-                          <TableCell>{job.customerName || '—'}</TableCell>
-                          <TableCell>
-                            <span className="text-sm text-muted-foreground line-clamp-2">
-                              {job.notes || '—'}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className="bg-blue-100 text-blue-800 border-blue-200">Pending</Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Job Title</TableHead>
+                      <TableHead>Assigned Date</TableHead>
+                      <TableHead>Due Date</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Notes</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {assignedJobs.map((job) => (
+                      <TableRow key={job.id}>
+                        <TableCell className="font-medium">{job.title}</TableCell>
+                        <TableCell>{job.assigned_date}</TableCell>
+                        <TableCell>{job.due_date || '—'}</TableCell>
+                        <TableCell>{job.customerName || '—'}</TableCell>
+                        <TableCell>
+                          <span className="text-sm text-muted-foreground line-clamp-2">
+                            {job.notes || '—'}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className="bg-blue-100 text-blue-800 border-blue-200">Pending</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-2"
+                              onClick={() => openCompleteDialog(job)}
+                            >
+                              <CheckCircle2 className="size-4" />
+                              Complete
+                            </Button>
+                            {job.customer_id && (
                               <Button
                                 size="sm"
                                 variant="outline"
                                 className="gap-2"
-                                onClick={() => openCompleteDialog(job)}
+                                onClick={() => router.push(`/customers/${job.customer_id}`)}
                               >
-                                <CheckCircle2 className="size-4" />
-                                Complete
+                                View
                               </Button>
-                              {job.customer_id && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="gap-2"
-                                  onClick={() => router.push(`/customers/${job.customer_id}`)}
-                                >
-                                  View
-                                </Button>
-                              )}
-                              {role !== 'technician' && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="gap-2 text-red-600 hover:text-red-600"
-                                  onClick={() => handleDeleteJob(job.id)}
-                                >
-                                  <Trash2 className="size-4" />
-                                </Button>
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-
-                <div className="flex flex-col gap-4 md:hidden">
-                  {assignedJobs.map((job) => (
-                    <Card key={job.id}>
-                      <CardHeader className="pb-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex min-w-0 items-center gap-3">
-                            <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                              <Wrench className="size-5 text-primary" />
-                            </div>
-                            <div className="min-w-0">
-                              <CardTitle className="truncate text-sm font-semibold">{job.title}</CardTitle>
-                              <CardDescription className="mt-0.5 truncate text-xs">{job.customerName || 'No customer'}</CardDescription>
-                            </div>
+                            )}
+                            {role !== 'technician' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-2 text-red-600 hover:text-red-600"
+                                onClick={() => handleDeleteJob(job.id)}
+                              >
+                                <Trash2 className="size-4" />
+                              </Button>
+                            )}
                           </div>
-                          <Badge className="shrink-0 bg-blue-100 text-blue-800 border-blue-200">Pending</Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
-                          <div><p className="text-xs text-muted-foreground">Assigned Date</p><p className="text-sm font-medium">{job.assigned_date}</p></div>
-                          <div><p className="text-xs text-muted-foreground">Due Date</p><p className="text-sm font-medium">{job.due_date || '—'}</p></div>
-                          <div className="col-span-2"><p className="text-xs text-muted-foreground">Notes</p><p className="text-sm font-medium line-clamp-2">{job.notes || '—'}</p></div>
-                        </div>
-                        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-2">
-                          <div className="flex flex-wrap gap-2">
-                            <Button size="sm" variant="outline" className="gap-2" onClick={() => openCompleteDialog(job)}><CheckCircle2 className="size-4" />Complete</Button>
-                            {job.customer_id && <Button size="sm" variant="outline" onClick={() => router.push(`/customers/${job.customer_id}`)}>View</Button>}
-                            {role !== 'technician' && <Button size="sm" variant="ghost" className="text-red-600 hover:text-red-600" onClick={() => handleDeleteJob(job.id)}><Trash2 className="size-4" /><span className="sr-only">Delete job</span></Button>}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Job History Section */}
-        <Card>
+        {/* ── MOBILE: Assigned Jobs Cards ── */}
+        <div className="flex flex-col gap-4 md:hidden">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Assigned Jobs</h2>
+              <p className="text-sm text-muted-foreground">
+                {assignedJobs.length} job{assignedJobs.length !== 1 ? 's' : ''} assigned
+              </p>
+            </div>
+            {role !== 'technician' && (
+              <Button onClick={() => setModalOpen(true)} size="sm" className="gap-2">
+                <Plus className="size-4" />
+                Add Job
+              </Button>
+            )}
+          </div>
+
+          {assignedJobs.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No jobs assigned to this technician
+            </div>
+          ) : (
+            assignedJobs.map((job) => (
+              <Card key={job.id}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <Wrench className="size-5 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <CardTitle className="truncate text-sm font-semibold">{job.title}</CardTitle>
+                        <CardDescription className="mt-0.5 truncate text-xs">{job.customerName || 'No customer'}</CardDescription>
+                      </div>
+                    </div>
+                    <Badge className="shrink-0 bg-blue-100 text-blue-800 border-blue-200">Pending</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                    <div><p className="text-xs text-muted-foreground">Assigned Date</p><p className="text-sm font-medium">{job.assigned_date}</p></div>
+                    <div><p className="text-xs text-muted-foreground">Due Date</p><p className="text-sm font-medium">{job.due_date || '—'}</p></div>
+                    <div className="col-span-2"><p className="text-xs text-muted-foreground">Notes</p><p className="text-sm font-medium line-clamp-2">{job.notes || '—'}</p></div>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-2">
+                    <div className="flex flex-wrap gap-2">
+                      <Button size="sm" variant="outline" className="gap-2" onClick={() => openCompleteDialog(job)}><CheckCircle2 className="size-4" />Complete</Button>
+                      {job.customer_id && <Button size="sm" variant="outline" onClick={() => router.push(`/customers/${job.customer_id}`)}>View</Button>}
+                      {role !== 'technician' && <Button size="sm" variant="ghost" className="text-red-600 hover:text-red-600" onClick={() => handleDeleteJob(job.id)}><Trash2 className="size-4" /><span className="sr-only">Delete job</span></Button>}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+
+        {/* ── DESKTOP: Job History Table ── */}
+        <Card className="hidden md:block">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CheckCircle2 className="size-5" />
@@ -786,7 +806,7 @@ export default function TechnicianDetailPage() {
               </div>
             ) : (
               <>
-                <div className="hidden md:block overflow-x-auto">
+                <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -831,51 +851,6 @@ export default function TechnicianDetailPage() {
                     </TableBody>
                   </Table>
                 </div>
-
-                <div className="flex flex-col gap-4 md:hidden">
-                  {visibleHistory.map((job) => (
-                    <Card key={job.id}>
-                      <CardHeader className="pb-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex min-w-0 items-center gap-3">
-                            <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                              <CheckCircle2 className="size-5 text-primary" />
-                            </div>
-                            <div className="min-w-0">
-                              <CardTitle className="truncate text-sm font-semibold">{job.title}</CardTitle>
-                              <CardDescription className="mt-0.5 truncate text-xs">{job.customerName || 'No customer'}</CardDescription>
-                            </div>
-                          </div>
-                          <Badge variant="outline" className="shrink-0 text-xs font-normal">
-                            {getSourceBadgeLabel(job.source)}
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
-                          <div><p className="text-xs text-muted-foreground">Completed</p><p className="text-sm font-medium">{job.completedDate || '—'}</p></div>
-                          {job.photoUrl && (
-                            <div>
-                              <p className="text-xs text-muted-foreground">Photo</p>
-                              <button
-                                type="button"
-                                onClick={() => setPhotoModalUrl(job.photoUrl)}
-                                className="mt-1 block overflow-hidden rounded-md focus-visible:outline-none"
-                              >
-                                <img src={job.photoUrl} alt="Work photo" className="size-12 rounded-md object-cover" />
-                              </button>
-                            </div>
-                          )}
-                          <div className="col-span-2"><p className="text-xs text-muted-foreground">Notes</p><p className="text-sm font-medium line-clamp-2">{job.notes || '—'}</p></div>
-                        </div>
-                        <div className="flex items-center justify-between border-t border-border pt-2">
-                          <span className="text-xs text-muted-foreground">Job History</span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-
                 {hasMoreHistory && (
                   <div className="flex justify-center mt-4">
                     <Button
@@ -891,6 +866,106 @@ export default function TechnicianDetailPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* ── MOBILE: Job History Cards ── */}
+        <div className="flex flex-col gap-4 md:hidden">
+          <div>
+            <h2 className="text-lg font-semibold">Job History</h2>
+            <p className="text-sm text-muted-foreground">
+              {filteredHistory.length} completed job{filteredHistory.length !== 1 ? 's' : ''}
+              {historyDateFilter && ` on ${historyDateFilter}`}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="relative flex-1">
+              <CalendarIcon className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+              <Input
+                type="date"
+                value={historyDateFilter}
+                onChange={(e) => {
+                  setHistoryDateFilter(e.target.value)
+                  setHistoryVisibleCount(HISTORY_PAGE_SIZE)
+                }}
+                className="pl-8 w-full"
+              />
+            </div>
+            {historyDateFilter && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearDateFilter}
+                className="gap-1 shrink-0"
+              >
+                <X className="size-3" />
+                Clear
+              </Button>
+            )}
+          </div>
+
+          {filteredHistory.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              {historyDateFilter
+                ? 'No completed jobs on this date'
+                : 'No completed jobs yet for this technician'}
+            </div>
+          ) : (
+            <>
+              {visibleHistory.map((job) => (
+                <Card key={job.id}>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                          <CheckCircle2 className="size-5 text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                          <CardTitle className="truncate text-sm font-semibold">{job.title}</CardTitle>
+                          <CardDescription className="mt-0.5 truncate text-xs">{job.customerName || 'No customer'}</CardDescription>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="shrink-0 text-xs font-normal">
+                        {getSourceBadgeLabel(job.source)}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                      <div><p className="text-xs text-muted-foreground">Completed</p><p className="text-sm font-medium">{job.completedDate || '—'}</p></div>
+                      {job.photoUrl && (
+                        <div>
+                          <p className="text-xs text-muted-foreground">Photo</p>
+                          <button
+                            type="button"
+                            onClick={() => setPhotoModalUrl(job.photoUrl)}
+                            className="mt-1 block overflow-hidden rounded-md focus-visible:outline-none"
+                          >
+                            <img src={job.photoUrl} alt="Work photo" className="size-12 rounded-md object-cover" />
+                          </button>
+                        </div>
+                      )}
+                      <div className="col-span-2"><p className="text-xs text-muted-foreground">Notes</p><p className="text-sm font-medium line-clamp-2">{job.notes || '—'}</p></div>
+                    </div>
+                    <div className="flex items-center justify-between border-t border-border pt-2">
+                      <span className="text-xs text-muted-foreground">Job History</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              {hasMoreHistory && (
+                <div className="flex justify-center mt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleLoadMoreHistory}
+                  >
+                    View More ({filteredHistory.length - historyVisibleCount} remaining)
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
 
         {/* Modals */}
         {user && currentOrgId && (
