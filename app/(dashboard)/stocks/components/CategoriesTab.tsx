@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -173,11 +173,10 @@ export default function CategoriesTab({ orgId }: CategoriesTabProps) {
         </Button>
       </div>
 
-      {/* ── DESKTOP: Table inside a Card ── */}
+      {/* ── DESKTOP: Table inside a Card (no description) ── */}
       <Card className="hidden md:block">
         <CardHeader>
           <CardTitle>Categories</CardTitle>
-          <CardDescription>Manage inventory item categories</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="border rounded-lg overflow-hidden">
@@ -246,8 +245,9 @@ export default function CategoriesTab({ orgId }: CategoriesTabProps) {
         </CardContent>
       </Card>
 
-      {/* ── MOBILE: Category Cards ── */}
+      {/* ── MOBILE: Title + Cards (no count line) ── */}
       <div className="flex flex-col gap-4 md:hidden">
+        <h2 className="text-lg font-semibold">Categories</h2>
         {loading ? (
           <div className="text-center py-8 text-muted-foreground">Loading categories...</div>
         ) : filteredCategories.length === 0 ? (
@@ -255,76 +255,67 @@ export default function CategoriesTab({ orgId }: CategoriesTabProps) {
             {searchTerm ? "No categories found matching your search" : "No categories yet"}
           </div>
         ) : (
-          <>
-            <p className="text-sm text-muted-foreground">
-              Showing{" "}
-              <span className="font-medium text-foreground">{filteredCategories.length}</span>{" "}
-              categories{" "}
-              {searchTerm ? "matching filters" : "in total"}
-            </p>
-
-            {filteredCategories.map((category) => (
-              <Card key={category.id} className="relative">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                        <FolderOpen className="size-5 text-primary" />
-                      </div>
-                      <div className="min-w-0">
-                        <CardTitle className="text-sm font-semibold leading-tight truncate">
-                          {category.name}
-                        </CardTitle>
-                        <CardDescription className="text-xs truncate mt-0.5">
-                          {category.itemCount} item{category.itemCount !== 1 && 's'}
-                        </CardDescription>
-                      </div>
+          filteredCategories.map((category) => (
+            <Card key={category.id} className="relative">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                      <FolderOpen className="size-5 text-primary" />
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="size-8">
-                            <MoreHorizontal className="size-4" />
-                            <span className="sr-only">Actions</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEditCategory(category)}>
-                            <Edit className="mr-2 size-4" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setCategoryToDelete(category)
-                              setDeleteDialogOpen(true)
-                            }}
-                            className="text-red-600"
-                          >
-                            <Trash2 className="mr-2 size-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                    <div className="min-w-0">
+                      <CardTitle className="text-sm font-semibold leading-tight truncate">
+                        {category.name}
+                      </CardTitle>
+                      <CardDescription className="text-xs truncate mt-0.5">
+                        {category.itemCount} item{category.itemCount !== 1 && 's'}
+                      </CardDescription>
                     </div>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-0.5">Created</p>
-                      <p className="text-sm font-medium">
-                        {new Date(category.created_at).toLocaleDateString("en-IN")}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-0.5">Items</p>
-                      <p className="text-sm font-medium">{category.itemCount}</p>
-                    </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="size-8">
+                          <MoreHorizontal className="size-4" />
+                          <span className="sr-only">Actions</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleEditCategory(category)}>
+                          <Edit className="mr-2 size-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setCategoryToDelete(category)
+                            setDeleteDialogOpen(true)
+                          }}
+                          className="text-red-600"
+                        >
+                          <Trash2 className="mr-2 size-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-0.5">Created</p>
+                    <p className="text-sm font-medium">
+                      {new Date(category.created_at).toLocaleDateString("en-IN")}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-0.5">Items</p>
+                    <p className="text-sm font-medium">{category.itemCount}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
         )}
       </div>
 

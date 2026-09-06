@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -286,11 +286,10 @@ export default function ItemsTable({
         </div>
       </div>
 
-      {/* ── DESKTOP: Table inside a Card ── */}
+      {/* ── DESKTOP: Table inside a Card (no description) ── */}
       <Card className="hidden md:block">
         <CardHeader>
           <CardTitle>Inventory Items</CardTitle>
-          <CardDescription>Manage your inventory and track stock levels</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="border rounded-lg overflow-hidden">
@@ -403,8 +402,9 @@ export default function ItemsTable({
         </CardContent>
       </Card>
 
-      {/* ── MOBILE: Individual item cards ── */}
+      {/* ── MOBILE: Title + Cards (no count line) ── */}
       <div className="flex flex-col gap-4 md:hidden">
+        <h2 className="text-lg font-semibold">Inventory Items</h2>
         {loading ? (
           <div className="text-center py-8 text-muted-foreground">Loading inventory items...</div>
         ) : filteredItems.length === 0 ? (
@@ -414,132 +414,114 @@ export default function ItemsTable({
               : "No inventory items yet"}
           </div>
         ) : (
-          <>
-            <p className="text-sm text-muted-foreground">
-              Showing{" "}
-              <span className="font-medium text-foreground">{filteredItems.length}</span>{" "}
-              items{" "}
-              {searchTerm || filterStatus !== "all" || filterCategory !== "all" || filterLocation !== "all"
-                ? "matching filters"
-                : "in total"}
-            </p>
+          filteredItems.map((item) => {
+            const stockStatus = getStockStatus(item.current_stock, item.min_stock_level)
+            const category = categories.find((c) => c.id === item.category_id)
 
-            {filteredItems.map((item) => {
-              const stockStatus = getStockStatus(item.current_stock, item.min_stock_level)
-              const category = categories.find((c) => c.id === item.category_id)
-
-              return (
-                <Card key={item.id} className="relative">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between gap-2">
-                      {/* Left: icon + name + SKU/brand */}
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                          <Package className="size-5 text-primary" />
-                        </div>
-                        <div className="min-w-0">
-                          <CardTitle className="text-sm font-semibold leading-tight truncate">
-                            {item.name}
-                          </CardTitle>
-                          <CardDescription className="text-xs truncate mt-0.5">
-                            {item.sku || "—"}{item.brand ? ` · ${item.brand}` : ""}
-                          </CardDescription>
-                        </div>
+            return (
+              <Card key={item.id} className="relative">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <Package className="size-5 text-primary" />
                       </div>
-
-                      {/* Right: status badge + 3-dot menu */}
-                      <div className="flex items-center gap-1 shrink-0">
-                        <Badge className={stockStatus.color}>{stockStatus.status}</Badge>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="size-8">
-                              <MoreHorizontal className="size-4" />
-                              <span className="sr-only">Actions</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => onEditItem(item)}>
-                              <Edit className="mr-2 size-4" />
-                              View
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleHistoryClick(item)}>
-                              <History className="mr-2 size-4" />
-                              History
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setItemToDelete(item)
-                                setDeleteDialogOpen(true)
-                              }}
-                              className="text-red-600"
-                            >
-                              <Trash2 className="mr-2 size-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                      <div className="min-w-0">
+                        <CardTitle className="text-sm font-semibold leading-tight truncate">
+                          {item.name}
+                        </CardTitle>
+                        <CardDescription className="text-xs truncate mt-0.5">
+                          {item.sku || "—"}{item.brand ? ` · ${item.brand}` : ""}
+                        </CardDescription>
                       </div>
                     </div>
-                  </CardHeader>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Badge className={stockStatus.color}>{stockStatus.status}</Badge>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="size-8">
+                            <MoreHorizontal className="size-4" />
+                            <span className="sr-only">Actions</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => onEditItem(item)}>
+                            <Edit className="mr-2 size-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleHistoryClick(item)}>
+                            <History className="mr-2 size-4" />
+                            History
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setItemToDelete(item)
+                              setDeleteDialogOpen(true)
+                            }}
+                            className="text-red-600"
+                          >
+                            <Trash2 className="mr-2 size-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center justify-between rounded-lg px-3 py-2.5">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-0.5">Current Stock</p>
+                      <p className="text-lg font-bold leading-none">
+                        {item.current_stock}{" "}
+                        <span className="text-sm font-normal text-muted-foreground">{item.unit}</span>
+                      </p>
+                    </div>
+                  </div>
 
-                  <CardContent className="space-y-3">
-                    {/* Stock level — background removed */}
-                    <div className="flex items-center justify-between rounded-lg px-3 py-2.5">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                    {category?.name && (
                       <div>
-                        <p className="text-xs text-muted-foreground mb-0.5">Current Stock</p>
-                        <p className="text-lg font-bold leading-none">
-                          {item.current_stock}{" "}
-                          <span className="text-sm font-normal text-muted-foreground">{item.unit}</span>
-                        </p>
+                        <p className="text-xs text-muted-foreground mb-0.5">Category</p>
+                        <p className="text-sm font-medium">{category.name}</p>
                       </div>
+                    )}
+                    <div className={category?.name ? "" : "col-span-2"}>
+                      <p className="text-xs text-muted-foreground mb-0.5">Selling Price</p>
+                      <p className="text-sm font-medium">{formatINR(item.selling_price)}</p>
                     </div>
-
-                    {/* Details grid – conditionally hide Category if missing */}
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
-                      {category?.name && (
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-0.5">Category</p>
-                          <p className="text-sm font-medium">{category.name}</p>
-                        </div>
-                      )}
-                      <div className={category?.name ? "" : "col-span-2"}>
-                        <p className="text-xs text-muted-foreground mb-0.5">Selling Price</p>
-                        <p className="text-sm font-medium">{formatINR(item.selling_price)}</p>
+                    {item.storage_location && (
+                      <div className="col-span-2">
+                        <p className="text-xs text-muted-foreground mb-0.5">Location</p>
+                        <p className="text-sm font-medium">{item.storage_location}</p>
                       </div>
-                      {item.storage_location && (
-                        <div className="col-span-2">
-                          <p className="text-xs text-muted-foreground mb-0.5">Location</p>
-                          <p className="text-sm font-medium">{item.storage_location}</p>
-                        </div>
-                      )}
-                    </div>
+                    )}
+                  </div>
 
-                    {/* Stock In / Out buttons */}
-                    <div className="flex items-center gap-2 border-t border-border pt-2.5">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200"
-                        onClick={() => handleStockClick(item, "in")}
-                      >
-                        <ArrowUp className="mr-1.5 size-4" />
-                        Stock In
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-                        onClick={() => handleStockClick(item, "out")}
-                      >
-                        <ArrowDown className="mr-1.5 size-4" />
-                        Stock Out
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </>
+                  <div className="flex items-center gap-2 border-t border-border pt-2.5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200"
+                      onClick={() => handleStockClick(item, "in")}
+                    >
+                      <ArrowUp className="mr-1.5 size-4" />
+                      Stock In
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                      onClick={() => handleStockClick(item, "out")}
+                    >
+                      <ArrowDown className="mr-1.5 size-4" />
+                      Stock Out
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })
         )}
       </div>
 
