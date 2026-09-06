@@ -42,11 +42,9 @@ interface StockInOutDialogProps {
   onSuccess: () => void
 }
 
-// All possible reasons (display names)
 const OUT_REASONS = ["Sold", "Used", "Returned", "Adjustment", "Damage", "Sample", "Other"]
 const IN_REASONS = ["Purchase", "Returned", "Adjustment", "Other"]
 
-// Map to display "Sell" for "Sold" in UI
 const REASON_DISPLAY_MAP: Record<string, string> = {
   Sold: "Sell",
   Purchase: "Purchase",
@@ -144,7 +142,6 @@ export default function StockInOutDialog({
         return
       }
 
-      // Update item stock
       const { error: updateError } = await supabase
         .from("inventory_items")
         .update({ current_stock: newStock })
@@ -153,13 +150,12 @@ export default function StockInOutDialog({
 
       if (updateError) throw updateError
 
-      // Build movement record
       const movementData: any = {
         org_id: orgId,
         item_id: item.id,
         movement_type: mode,
         quantity: quantity,
-        reason: reason, // Store raw reason
+        reason: reason,
         supplier_id: supplierId || null,
         technician_id: technicianId || null,
         notes: notes || null,
@@ -186,13 +182,16 @@ export default function StockInOutDialog({
     }
   }
 
-  // Determine primary reasons and the rest
   const allReasons = mode === "out" ? OUT_REASONS : IN_REASONS
   const primaryReasons = mode === "out" ? ["Sold", "Used"] : ["Purchase"]
   const otherReasons = allReasons.filter(r => !primaryReasons.includes(r))
 
-  // Get display name for a reason
   const getDisplayName = (r: string) => REASON_DISPLAY_MAP[r] || r
+
+  // Determine visibility for customer and technician fields (only for stock out)
+  const showCustomer = mode === "out" && reason === "Sold"
+  const showTechnician = mode === "out" && reason === "Used"
+  // For other reasons, hide both (only "Sell" and "Used" have dedicated fields)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -229,11 +228,10 @@ export default function StockInOutDialog({
             />
           </div>
 
-          {/* Reason – with primary buttons + dropdown */}
+          {/* Reason */}
           <div className="flex flex-col gap-2">
             <Label>Reason *</Label>
             <div className="flex flex-wrap items-center gap-2">
-              {/* Primary buttons */}
               {primaryReasons.map((r) => (
                 <Button
                   key={r}
@@ -246,8 +244,6 @@ export default function StockInOutDialog({
                   {getDisplayName(r)}
                 </Button>
               ))}
-
-              {/* Dropdown for other reasons */}
               <Select
                 value={otherReasons.includes(reason) ? reason : ""}
                 onValueChange={(val) => setReason(val)}
@@ -264,8 +260,6 @@ export default function StockInOutDialog({
                 </SelectContent>
               </Select>
             </div>
-
-            {/* Show currently selected reason (optional) */}
             {reason && (
               <p className="text-sm text-muted-foreground">
                 Selected: <span className="font-medium">{getDisplayName(reason)}</span>
@@ -292,10 +286,10 @@ export default function StockInOutDialog({
             </div>
           )}
 
-          {/* Customer Name – free text, only for Stock Out */}
-          {mode === "out" && (
+          {/* Customer Name – only for Stock Out with "Sell" reason */}
+          {showCustomer && (
             <div className="flex flex-col gap-2">
-              <Label htmlFor="customerName">Customer Name (optional)</Label>
+              <Label htmlFor="customerName">Customer Name</Label>
               <Input
                 id="customerName"
                 placeholder="Enter customer name"
@@ -305,10 +299,10 @@ export default function StockInOutDialog({
             </div>
           )}
 
-          {/* Technician (only for Stock Out) */}
-          {mode === "out" && (
+          {/* Technician – only for Stock Out with "Used" reason */}
+          {showTechnician && (
             <div className="flex flex-col gap-2">
-              <Label htmlFor="technician">Used By Technician (optional)</Label>
+              <Label htmlFor="technician">Used By Technician</Label>
               <Select value={technicianId} onValueChange={setTechnicianId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select technician" />
