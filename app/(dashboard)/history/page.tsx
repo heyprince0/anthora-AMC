@@ -23,10 +23,9 @@ import {
 } from "@/components/ui/select"
 import { supabase, type ServiceHistory, type Contract, type Technician, type Customer, type CompanyProfile } from "@/lib/supabase"
 import { useAuth } from "@/lib/auth-context"
-import { Search, Download, Calendar, CheckCircle2, XCircle, Clock, FileText, Eye } from "lucide-react"
+import { Search, Download, Calendar, CheckCircle2, XCircle, Clock, FileText } from "lucide-react"
 import { ExportModal } from "@/components/export-modal"
 import { toast } from "sonner"
-import Link from "next/link"
 
 // Month options for the date filter
 const MONTHS = [
@@ -300,7 +299,7 @@ export default function ServiceHistoryPage() {
           </CardContent>
         </Card>
 
-        {/* Mobile: Service History Cards */}
+        {/* Mobile: Service History Cards (View button removed) */}
         <div className="flex flex-col gap-4 md:hidden">
           {loading ? (
             <div className="text-center py-8 text-muted-foreground">Loading service history...</div>
@@ -362,16 +361,9 @@ export default function ServiceHistoryPage() {
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center justify-between pt-2 border-t border-border">
-                      <div className="text-xs text-muted-foreground truncate">
-                        &nbsp;
-                      </div>
-                      <Link href={`/service-history/${record.id}`}>
-                        <Button variant="ghost" size="sm" className="gap-2 shrink-0">
-                          <Eye className="size-4" />
-                          View
-                        </Button>
-                      </Link>
+                    {/* Footer without View button */}
+                    <div className="flex items-center justify-end pt-2 border-t border-border">
+                      <span className="text-xs text-muted-foreground">Service Record</span>
                     </div>
                   </CardContent>
                 </Card>
