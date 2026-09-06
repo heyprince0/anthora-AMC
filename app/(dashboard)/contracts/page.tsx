@@ -558,7 +558,7 @@ export default function ContractsPage() {
           </div>
         </div>
 
-        {/* ── Standalone Filter Bar ── */}
+        {/* ── Filter Bar ── */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center flex-wrap min-w-0">
           <div className="relative flex-1 min-w-[150px]">
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -570,10 +570,9 @@ export default function ContractsPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-
-          <div className="grid grid-cols-2 gap-2 w-full md:flex md:flex-wrap md:w-auto md:gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-full md:w-[140px] sm:w-[160px]">
+              <SelectTrigger className="w-[140px] sm:w-[160px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -586,7 +585,7 @@ export default function ContractsPage() {
             </Select>
 
             <Select value={filterMonth} onValueChange={setFilterMonth}>
-              <SelectTrigger className="w-full md:w-[140px] sm:w-[160px]">
+              <SelectTrigger className="w-[140px] sm:w-[160px]">
                 <SelectValue placeholder="Month" />
               </SelectTrigger>
               <SelectContent>
@@ -598,66 +597,64 @@ export default function ContractsPage() {
               </SelectContent>
             </Select>
 
-            <div className="col-span-2 md:col-span-1">
-              <Popover open={locationPopoverOpen} onOpenChange={setLocationPopoverOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={locationPopoverOpen}
-                    className="w-full md:w-[140px] sm:w-[160px] justify-between font-normal"
-                  >
-                    <span className="truncate">
-                      {filterLocation === "all" ? "Location" : filterLocation}
-                    </span>
-                    <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[200px] p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="Search location..." />
-                    <CommandList>
-                      <CommandEmpty>No location found.</CommandEmpty>
-                      <CommandGroup>
+            <Popover open={locationPopoverOpen} onOpenChange={setLocationPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={locationPopoverOpen}
+                  className="w-[140px] sm:w-[160px] justify-between font-normal"
+                >
+                  <span className="truncate">
+                    {filterLocation === "all" ? "Location" : filterLocation}
+                  </span>
+                  <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[200px] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Search location..." />
+                  <CommandList>
+                    <CommandEmpty>No location found.</CommandEmpty>
+                    <CommandGroup>
+                      <CommandItem
+                        value="all"
+                        onSelect={() => {
+                          setFilterLocation("all")
+                          setLocationPopoverOpen(false)
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 size-4",
+                            filterLocation === "all" ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        All Locations
+                      </CommandItem>
+                      {availableLocations.map((loc) => (
                         <CommandItem
-                          value="all"
+                          key={loc}
+                          value={loc}
                           onSelect={() => {
-                            setFilterLocation("all")
+                            setFilterLocation(filterLocation === loc ? "all" : loc)
                             setLocationPopoverOpen(false)
                           }}
                         >
                           <Check
                             className={cn(
                               "mr-2 size-4",
-                              filterLocation === "all" ? "opacity-100" : "opacity-0"
+                              filterLocation === loc ? "opacity-100" : "opacity-0"
                             )}
                           />
-                          All Locations
+                          <span className="truncate">{loc}</span>
                         </CommandItem>
-                        {availableLocations.map((loc) => (
-                          <CommandItem
-                            key={loc}
-                            value={loc}
-                            onSelect={() => {
-                              setFilterLocation(filterLocation === loc ? "all" : loc)
-                              setLocationPopoverOpen(false)
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 size-4",
-                                filterLocation === loc ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            <span className="truncate">{loc}</span>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            </div>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
 
@@ -780,10 +777,11 @@ export default function ContractsPage() {
                             <FileText className="size-5 text-primary" />
                           </div>
                           <div className="min-w-0">
-                            <CardTitle className="text-sm font-semibold leading-tight truncate">
+                            {/* ── FIX: allow long names to wrap ── */}
+                            <CardTitle className="text-sm font-semibold leading-tight break-words">
                               {contract.contract_name}
                             </CardTitle>
-                            <CardDescription className="text-xs truncate mt-0.5">
+                            <CardDescription className="text-xs break-words mt-0.5">
                               {contract.customerName}
                             </CardDescription>
                           </div>
