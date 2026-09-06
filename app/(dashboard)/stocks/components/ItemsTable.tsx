@@ -226,6 +226,9 @@ export default function ItemsTable({
 
   return (
     <div className="flex flex-col gap-6">
+      {/* ── Title (mobile only) ── */}
+      <h2 className="text-lg font-semibold md:hidden">Inventory Items</h2>
+
       {/* ── Filter Bar (plain, no card) ── */}
       <div className="flex flex-col gap-3 md:flex-row md:items-center flex-wrap">
         <div className="relative flex-1 min-w-[150px]">
@@ -286,7 +289,7 @@ export default function ItemsTable({
         </div>
       </div>
 
-      {/* ── DESKTOP: Table inside a Card (no description) ── */}
+      {/* ── DESKTOP: Table inside a Card (title in CardHeader) ── */}
       <Card className="hidden md:block">
         <CardHeader>
           <CardTitle>Inventory Items</CardTitle>
@@ -402,9 +405,8 @@ export default function ItemsTable({
         </CardContent>
       </Card>
 
-      {/* ── MOBILE: Title + Cards (no count line) ── */}
+      {/* ── MOBILE: Cards (title now above filter) ── */}
       <div className="flex flex-col gap-4 md:hidden">
-        <h2 className="text-lg font-semibold">Inventory Items</h2>
         {loading ? (
           <div className="text-center py-8 text-muted-foreground">Loading inventory items...</div>
         ) : filteredItems.length === 0 ? (
